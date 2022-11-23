@@ -238,7 +238,7 @@ def crysFeaturizer(SC_object : StructureConnectivity, oxidation_list : list[int]
     oxidation_list : list[int]
         A list of oxidation numbers of the atoms in the crystal with the same order as the atoms' index.
     '''
-    struct = SC_object.light_structure_environments.structure #takes structure from StructureConnecivity Obj
+    struct = SC_object.light_structure_environments.structure
 
     # Computing first degree features
     first_structure_data : dict = firstDegreeFeatures(SC_object=SC_object, oxidation_list = oxidation_list, struct=struct)
