@@ -139,9 +139,11 @@ def firstDegreeFeatures(SC_object : StructureConnectivity, oxidation_list : list
 
 def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure_data : dict) -> dict:
     '''
-    Calculates the desired NNN features based on SC object, and addes them to a dictionary (of primary features).
-    These features are stored for each atom, under their structure index.
-    NNN features Include: Polhedral neighbor elements, distances, connectivity angles & types. 
+    Calculates the desired NNN (next nearest neighbors) features based on SC object,
+    and addes them to a dictionary (of primary features). These features are stored
+    for each atom, under their structure index. NNN features Include: Polhedral neighbor
+    elements, distances, connectivity angles & types. 
+
     Parameters:
     ----------------
     SC_object : StructureConnectivity
@@ -193,16 +195,16 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
             else:
                 print('There was a problem with the connectivity.')
 
-            edge_angleS : list[Union[list, dict]]= []
+            edge_angleS : list[Union[list, dict]] = []
             edge_angleS.append(connectivity)
             for ligand in ligandS:
                 pos0=struct[ligand[1]["start"]].frac_coords
-                pos1=struct[ligand[1]["end"]].frac_coords+ligand[1]["delta"]
+                pos1=struct[ligand[1]["end"  ]].frac_coords + ligand[1]["delta"]
                 cart_pos0 = struct.lattice.get_cartesian_coords(pos0)
                 cart_pos1 = struct.lattice.get_cartesian_coords(pos1)
 
                 pos2=struct[ligand[2]["start"]].frac_coords
-                pos3=struct[ligand[2]["end"]].frac_coords+ligand[2]["delta"]
+                pos3=struct[ligand[2]["end"  ]].frac_coords + ligand[2]["delta"]
                 cart_pos2 = struct.lattice.get_cartesian_coords(pos2)
                 cart_pos3 = struct.lattice.get_cartesian_coords(pos3)
                 
@@ -217,8 +219,8 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
 
             node_angleS.append(edge_angleS)
 
-        structure_data[node.isite]['poly_distances']=distances 
-        structure_data[node.isite]['connectivity_angles']=node_angleS
+        structure_data[node.isite]['poly_distances'     ] = distances 
+        structure_data[node.isite]['connectivity_angles'] = node_angleS
     
     return structure_data
 
@@ -241,7 +243,7 @@ def crysFeaturizer(SC_object : StructureConnectivity, oxidation_list : list[int]
     struct = SC_object.light_structure_environments.structure
 
     # Computing first degree features
-    first_structure_data : dict = firstDegreeFeatures(SC_object=SC_object, oxidation_list = oxidation_list, struct=struct)
+    first_structure_data : dict = firstDegreeFeatures(SC_object = SC_object, oxidation_list = oxidation_list, struct = struct)
     # Add NNN features
     structure_data : dict = nnnFeatures(SC_object = SC_object, struct = struct, structure_data = first_structure_data)
 
