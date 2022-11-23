@@ -61,8 +61,11 @@ def groundtruth_oxide_check(testData):
     oxide_check_dict = dict()
     for Tdatum in testData:
         other_anion, other_oxidation, bad_structure, primStruc = oxide_check(Tdatum['structure'])
-        temp_dict = dict((('other_anion', other_anion), ('other_oxidation', other_oxidation), ('bad_structure',bad_structure), ('primStruc', primStruc)))
-        oxide_check_dict[Tdatum['material_id']] = temp_dict
+        oxide_check_dict[Tdatum['material_id']] = dict((
+            ('other_anion'    , other_anion),
+            ('other_oxidation', other_oxidation),
+            ('bad_structure'  , bad_structure),
+            ('primStruc'      , primStruc)))
 
     dumpfn(oxide_check_dict, "test_oxide_check.json.gz")
 
@@ -72,9 +75,8 @@ def groundtruth_env(testData):
     # This is used to calculate and save the actual results of the tests. Not to be included in the test script.
     analyze_env_dict = dict()
     for Tdatum in testData:
-        oxid_states, sc = analyze_env(Tdatum['structure'], mystrategy='simple')
-        temp_dict = dict([('oxid_states',oxid_states), ('sc', sc)])
-        analyze_env_dict[Tdatum['material_id']] = temp_dict
+        oxid_states, sc = analyze_env(Tdatum['structure'], mystrategy = 'simple')
+        analyze_env_dict[Tdatum['material_id']] = dict([('oxid_states', oxid_states), ('sc', sc)])
 
     dumpfn(analyze_env_dict, "test_env.json.gz")
 
@@ -87,7 +89,7 @@ def groundtruth_features(testData):
     crysFeaturizer_dict = dict()
     for Tdatum in testData:
         actual_structure_data = crysFeaturizer(
-            SC_object = analyze_env_dict[Tdatum['material_id']]['sc'],
+            SC_object      = analyze_env_dict[Tdatum['material_id']]['sc'],
             oxidation_list = analyze_env_dict[Tdatum['material_id']]['oxid_states'])
         crysFeaturizer_dict[Tdatum['material_id']] = actual_structure_data
 
