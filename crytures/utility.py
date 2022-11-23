@@ -25,9 +25,10 @@ def oxide_check(initStruc : Structure) -> tuple[bool, bool, bool, Structure]:
         The Structure object as it was queried from MP database.
     '''
 
-    primStruc = initStruc  #just in case the conversion to primitive doesn't work, the type remains consistent when function returns    
-    bad_structure = False
-    other_anion = False
+    # In case the conversion to primitive doesn't work, the type remains consistent when function returns
+    primStruc       = initStruc
+    bad_structure   = False
+    other_anion     = False
     other_oxidation = False
     
     try:
@@ -102,7 +103,7 @@ def mp_icsd_query(MPID : str, experimental_data = True) -> str:
                 "exp.tags", "icsd_ids", "formula", "pretty_formula", "structure",
                 "material_id", "theoretical", "formation_energy_per_atom", "e_above_hull" ])
 
-    # converts list to array, much faster to work with
+    # Converts list to array, much faster to work with
     data = np.array(data)
 
     return data
