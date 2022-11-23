@@ -4,7 +4,7 @@ import json
 
 from monty.serialization import loadfn, dumpfn
 
-from pymatgen.core import Structure
+from pymatgen.core        import Structure
 from pymatgen.ext.matproj import MPRester
 
 from crytures import crysFeaturizer
