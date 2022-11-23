@@ -179,7 +179,6 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
             # Record as distance for this edge (NNN) and for this node (atom of interest)
             distances.append(distance)
 
-
             # NNN angles calculation
             ligandS = edge[2]["ligands"]
 
@@ -213,7 +212,7 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
                 if edge[2]['start'] != node.isite:
                     poly_nb = structure_data[edge[2]['start']]['element']
                 else:
-                    poly_nb = structure_data[edge[2]['end']]['element']  
+                    poly_nb = structure_data[edge[2]['end'  ]]['element']  
 
                 edge_angleS.append([angle, poly_nb])
 
@@ -243,7 +242,10 @@ def crysFeaturizer(SC_object : StructureConnectivity, oxidation_list : list[int]
     struct = SC_object.light_structure_environments.structure
 
     # Computing first degree features
-    first_structure_data : dict = firstDegreeFeatures(SC_object = SC_object, oxidation_list = oxidation_list, struct = struct)
+    first_structure_data : dict = firstDegreeFeatures(
+        SC_object      = SC_object,
+        oxidation_list = oxidation_list,
+        struct         = struct)
     # Add NNN features
     structure_data : dict = nnnFeatures(SC_object = SC_object, struct = struct, structure_data = first_structure_data)
 
