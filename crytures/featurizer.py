@@ -14,8 +14,8 @@ from pymatgen.analysis.chemenv.coordination_environments.structure_environments 
 from pymatgen.analysis.chemenv.utils.defs_utils import AdditionalConditions
 from pymatgen.analysis.chemenv.connectivity.connectivity_finder import ConnectivityFinder
 from pymatgen.analysis.chemenv.connectivity.structure_connectivity import StructureConnectivity
-from pymatgen.util.coord import get_angle
 from pymatgen.core.structure import PeriodicSite, Structure
+from pymatgen.util.coord     import get_angle
 from typing import Generator, Sequence, Any, Union
 
 ## -----------------------------------------------------------------------------
@@ -155,11 +155,11 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
         A dictionary containing primary features of the crystal. The NNN features will be added under the same atom index.
     '''
 
-    nodeS = SC_object.environment_subgraph().nodes()
+    nodes = SC_object.environment_subgraph().nodes()
 
-    for node in nodeS:
+    for node in nodes:
         distances   = []
-        node_angleS = []
+        node_angles = []
 
         for edge in SC_object.environment_subgraph().edges(node, data=True):
 
@@ -180,23 +180,23 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
             distances.append(distance)
 
             # NNN angles calculation
-            ligandS = edge[2]["ligands"]
+            ligands = edge[2]["ligands"]
 
             connectivity = {}
-            if len(ligandS) == 0:
+            if len(ligands) == 0:
                 connectivity['kind'] = "noConnection"
-            if len(ligandS) == 1:
+            if len(ligands) == 1:
                 connectivity['kind'] = "corner"
-            elif len(ligandS) == 2:
+            elif len(ligands) == 2:
                 connectivity['kind'] = "edge"
-            elif len(ligandS) >= 3:
+            elif len(ligands) >= 3:
                 connectivity['kind'] = "face"
             else:
                 print('There was a problem with the connectivity.')
 
-            edge_angleS : list[Union[list, dict]] = []
-            edge_angleS.append(connectivity)
-            for ligand in ligandS:
+            edge_angles : list[Union[list, dict]] = []
+            edge_angles.append(connectivity)
+            for ligand in ligands:
                 pos0=struct[ligand[1]["start"]].frac_coords
                 pos1=struct[ligand[1]["end"  ]].frac_coords + ligand[1]["delta"]
                 cart_pos0 = struct.lattice.get_cartesian_coords(pos0)
@@ -214,12 +214,12 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
                 else:
                     poly_nb = structure_data[edge[2]['end'  ]]['element']  
 
-                edge_angleS.append([angle, poly_nb])
+                edge_angles.append([angle, poly_nb])
 
-            node_angleS.append(edge_angleS)
+            node_angles.append(edge_angles)
 
         structure_data[node.isite]['poly_distances'     ] = distances 
-        structure_data[node.isite]['connectivity_angles'] = node_angleS
+        structure_data[node.isite]['connectivity_angles'] = node_angles
     
     return structure_data
 
