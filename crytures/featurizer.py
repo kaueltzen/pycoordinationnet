@@ -101,7 +101,7 @@ def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidatio
         crystal Structure object from pymatgen
     '''
 
-    #structure = structure_connectivity.light_structure_environments.structure
+    structure = structure_connectivity.light_structure_environments.structure
     # Take lightStructureEnvironment Obj from StructureConnecivity Obj
     lse = structure_connectivity.light_structure_environments
     # Take coordination/local environments from lightStructureEnvironment Obj
