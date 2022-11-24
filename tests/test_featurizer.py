@@ -36,33 +36,33 @@ def test_exper_data_cleaning(testData):
 ## -----------------------------------------------------------------------------
 
 @pytest.fixture
-def actual_oxide_check():
+def oxide_check_true():
     return loadfn(os.path.join(root, 'test_oxide_check.json.gz'))
 
 ## -----------------------------------------------------------------------------
 
-def test_oxide_check(actual_oxide_check, testData):    
+def test_oxide_check(oxide_check_true, testData):    
     for Tdatum in testData:
         other_anion, other_oxidation, bad_structure, primStruc = oxide_check(Tdatum['structure'])
-        assert other_anion == actual_oxide_check[Tdatum['material_id']]['other_anion']
-        assert other_oxidation == actual_oxide_check[Tdatum['material_id']]['other_oxidation']
-        assert bad_structure == actual_oxide_check[Tdatum['material_id']]['bad_structure']
+        assert other_anion     == oxide_check_true[Tdatum['material_id']]['other_anion']
+        assert other_oxidation == oxide_check_true[Tdatum['material_id']]['other_oxidation']
+        assert bad_structure   == oxide_check_true[Tdatum['material_id']]['bad_structure']
         # TODO: There could be permutations or machine percision difference
-        assert np.isclose(primStruc.volume , actual_oxide_check[Tdatum['material_id']]['primStruc'].volume)
+        assert np.isclose(primStruc.volume , oxide_check_true[Tdatum['material_id']]['primStruc'].volume)
 
 ## -----------------------------------------------------------------------------
 
 @pytest.fixture
-def actual_analyze_env():
+def env_true():
     return loadfn(os.path.join(root, 'test_env.json.gz'))
 
 ## -----------------------------------------------------------------------------
 
-def test_analyze_env(actual_analyze_env, testData):    
+def test_analyze_env(env_true, testData):    
     for Tdatum in testData:
         sc, oxid_states = analyze_environment(Tdatum['structure'], mystrategy='simple')
-        assert oxid_states == actual_analyze_env[Tdatum['material_id']]['oxid_states']
-        assert sc.as_dict()['connectivity_graph'] == actual_analyze_env[Tdatum['material_id']]['sc'].as_dict()['connectivity_graph']
+        assert oxid_states == env_true[Tdatum['material_id']]['oxid_states']
+        assert sc.as_dict()['connectivity_graph'] == env_true[Tdatum['material_id']]['sc'].as_dict()['connectivity_graph']
 
 ## -----------------------------------------------------------------------------
 
