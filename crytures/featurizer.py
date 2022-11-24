@@ -236,11 +236,12 @@ def featurize(structure : Structure, env_strategy = 'simple') -> dict:
     Features Include: Oxidation number, type of ion, element, coordination for all atoms.
     Cation specific features are the local(coordination) env, nearest neighbor elements & distances, 
     polhedral neighbor elements, distances, connectivity angles & types. 
-    Parameters:
-    ----------------
-    SC_object : StructureConnectivity
-    oxidation_list : list[int]
-        A list of oxidation numbers of the atoms in the crystal with the same order as the atoms' index.
+
+    Args:
+        structure (Structure): A pymatgen structure object
+    
+    Returns:
+        A dictionary of features for each atom in the structure
     '''
     structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
 
