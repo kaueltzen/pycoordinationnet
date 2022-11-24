@@ -16,3 +16,5 @@ from crytures import featurize
 
 features = featurize(structure)
 ```
+
+The *features* object is a dict object with as many items as there are atoms in the material. The items can be accessed with the atom index. Each item contains the oxidation state of the atom (*oxidation*), the local environment (*localEnv*), the nearest neighbor distances (*NN_distances*), the poly distances (*poly_distances*), and the angles between connecting atoms (*connectivity_angles*).
