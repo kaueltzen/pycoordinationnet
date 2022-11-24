@@ -261,4 +261,3 @@ def featurize(structure : Structure, env_strategy = 'simple') -> dict:
         structure_data         = first_structure_data)
 
     return structure_data
-
