@@ -20,7 +20,7 @@ from typing import Generator, Sequence, Any, Union
 
 ## -----------------------------------------------------------------------------
 
-def analyze_env(struc : Structure, mystrategy : str = "simple") -> tuple[list[int], StructureConnectivity]:
+def analyze_environment(structure : Structure, mystrategy : str = "simple") -> tuple[StructureConnectivity, list[int]]:
     '''
     Analyzes the coordination environments and returns the StructureConnectivity object for the crystal and the list of oxidation states.
     First, BVAnalyzer() calculates the oxidation states. Then, the LocalGeometryFinder() computes the structure_environment object, 
@@ -40,7 +40,7 @@ def analyze_env(struc : Structure, mystrategy : str = "simple") -> tuple[list[in
         
     # The BVAnalyzer class implements a maximum a posteriori (MAP) estimation method to determine oxidation states in a structure.
     bv = BVAnalyzer()
-    oxid_states = bv.get_valences(struc)
+    oxid_states = bv.get_valences(structure)
     
     # Backup current stdout
     old_stdout = sys.stdout
@@ -51,7 +51,7 @@ def analyze_env(struc : Structure, mystrategy : str = "simple") -> tuple[list[in
     # Reset old stdout
     sys.stdout = old_stdout
     
-    lgf.setup_structure(structure = struc)
+    lgf.setup_structure(structure = structure)
     
     # Get the StructureEnvironments 
     se = lgf.compute_structure_environments(
@@ -68,7 +68,7 @@ def analyze_env(struc : Structure, mystrategy : str = "simple") -> tuple[list[in
     cf = ConnectivityFinder()
     sc = cf.get_structure_connectivity(light_structure_environments = lse)
 
-    return oxid_states, sc
+    return sc, oxid_states
 
 ## -----------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ def chunker(seq : Sequence, size : int) -> Generator[Any, None, None]:
 
 ## -----------------------------------------------------------------------------
 
-def firstDegreeFeatures(SC_object : StructureConnectivity, oxidation_list : list[int], struct : Structure) -> dict:
+def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> dict:
     '''
     Calculates the desired primary features (related to the atom and nearest neighbors) based on SC object, 
     returns them as a dictionary. These features are stored for each atom, under their structure index.
@@ -101,12 +101,13 @@ def firstDegreeFeatures(SC_object : StructureConnectivity, oxidation_list : list
         crystal Structure object from pymatgen
     '''
 
+    #structure = structure_connectivity.light_structure_environments.structure
     # Take lightStructureEnvironment Obj from StructureConnecivity Obj
-    LSE = SC_object.light_structure_environments
+    lse = structure_connectivity.light_structure_environments
     # Take coordination/local environments from lightStructureEnvironment Obj
-    local_Envs_list = LSE.coordination_environments
+    local_Envs_list = lse.coordination_environments
     structure_data : dict = {}
-    for atomIndex, atom in enumerate(LSE.neighbors_sets):
+    for atomIndex, atom in enumerate(lse.neighbors_sets):
         
         structure_data[atomIndex] = {}
         structure_data[atomIndex]['oxidation'] = oxidation_list[atomIndex]
@@ -114,30 +115,31 @@ def firstDegreeFeatures(SC_object : StructureConnectivity, oxidation_list : list
         if atom == None:
             # Save coordniates here 
             structure_data[atomIndex]['ion'    ] = 'anion'
-            structure_data[atomIndex]['element'] = struct[atomIndex].species_string
-            structure_data[atomIndex]['coords' ] = struct[atomIndex].coords
+            structure_data[atomIndex]['element'] = structure[atomIndex].species_string
+            structure_data[atomIndex]['coords' ] = structure[atomIndex].coords
             # Skip further featurization. We're not analyzing envs with anions
             continue
 
         structure_data[atomIndex]['ion'         ] = 'cation'
-        structure_data[atomIndex]['element'     ] = struct[atomIndex].species_string
-        structure_data[atomIndex]['coords'      ] = struct[atomIndex].coords
+        structure_data[atomIndex]['element'     ] = structure[atomIndex].species_string
+        structure_data[atomIndex]['coords'      ] = structure[atomIndex].coords
         structure_data[atomIndex]['localEnv'    ] = local_Envs_list[atomIndex]
         structure_data[atomIndex]['NN_distances'] = []
 
         neighbors = atom[0].neighb_sites_and_indices
         for nb in neighbors:
             # Pymatgen bug-fix (PeriodicNeighbor cannot be serialized, need to convert to PeriodicSite)
+            # (fixed with 0eb1e3d72fd894b7ba39a5129fbd8b18aedf4b46)
             site = PeriodicSite.from_dict(nb['site'].as_dict())
             nb_element  = site.species_string
-            nb_distance = site.distance_from_point(struct[atomIndex].coords)
+            nb_distance = site.distance_from_point(structure[atomIndex].coords)
             structure_data[atomIndex]['NN_distances'].append([nb_distance, nb_element])
     
     return structure_data
 
 ## -----------------------------------------------------------------------------
 
-def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure_data : dict) -> dict:
+def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data : dict) -> dict:
     '''
     Calculates the desired NNN (next nearest neighbors) features based on SC object,
     and addes them to a dictionary (of primary features). These features are stored
@@ -155,18 +157,19 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
         A dictionary containing primary features of the crystal. The NNN features will be added under the same atom index.
     '''
 
-    nodes = SC_object.environment_subgraph().nodes()
+    structure = structure_connectivity.light_structure_environments.structure
+    nodes     = structure_connectivity.environment_subgraph().nodes()
 
     for node in nodes:
         distances   = []
         node_angles = []
 
-        for edge in SC_object.environment_subgraph().edges(node, data=True):
+        for edge in structure_connectivity.environment_subgraph().edges(node, data=True):
 
             # NNN distance calculation
-            distance      = struct[edge[2]["start"]].distance(struct[edge[2]["end"]], edge[2]["delta"])
-            start_element = struct[edge[2]["start"]].species_string
-            end_element   = struct[edge[2]["end"  ]].species_string
+            distance      = structure[edge[2]["start"]].distance(structure[edge[2]["end"]], edge[2]["delta"])
+            start_element = structure[edge[2]["start"]].species_string
+            end_element   = structure[edge[2]["end"  ]].species_string
 
             # Can't see an order on which side edge starts
             if node.atom_symbol != end_element:
@@ -197,15 +200,15 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
             edge_angles : list[Union[list, dict]] = []
             edge_angles.append(connectivity)
             for ligand in ligands:
-                pos0=struct[ligand[1]["start"]].frac_coords
-                pos1=struct[ligand[1]["end"  ]].frac_coords + ligand[1]["delta"]
-                cart_pos0 = struct.lattice.get_cartesian_coords(pos0)
-                cart_pos1 = struct.lattice.get_cartesian_coords(pos1)
+                pos0=structure[ligand[1]["start"]].frac_coords
+                pos1=structure[ligand[1]["end"  ]].frac_coords + ligand[1]["delta"]
+                cart_pos0 = structure.lattice.get_cartesian_coords(pos0)
+                cart_pos1 = structure.lattice.get_cartesian_coords(pos1)
 
-                pos2=struct[ligand[2]["start"]].frac_coords
-                pos3=struct[ligand[2]["end"  ]].frac_coords + ligand[2]["delta"]
-                cart_pos2 = struct.lattice.get_cartesian_coords(pos2)
-                cart_pos3 = struct.lattice.get_cartesian_coords(pos3)
+                pos2=structure[ligand[2]["start"]].frac_coords
+                pos3=structure[ligand[2]["end"  ]].frac_coords + ligand[2]["delta"]
+                cart_pos2 = structure.lattice.get_cartesian_coords(pos2)
+                cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
                 
                 angle = get_angle(cart_pos0-cart_pos1, cart_pos2-cart_pos3, units="degrees")
 
@@ -225,7 +228,7 @@ def nnnFeatures(SC_object : StructureConnectivity, struct : Structure, structure
 
 ## -----------------------------------------------------------------------------
 
-def crysFeaturizer(SC_object : StructureConnectivity, oxidation_list : list[int]) -> dict:
+def featurize(structure : Structure, env_strategy = 'simple') -> dict:
     '''
     Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
     based on SC object, returns them as a dictionary. These features are stored for each atom,
@@ -239,15 +242,16 @@ def crysFeaturizer(SC_object : StructureConnectivity, oxidation_list : list[int]
     oxidation_list : list[int]
         A list of oxidation numbers of the atoms in the crystal with the same order as the atoms' index.
     '''
-    struct = SC_object.light_structure_environments.structure
+    structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
 
     # Computing first degree features
     first_structure_data : dict = firstDegreeFeatures(
-        SC_object      = SC_object,
-        oxidation_list = oxidation_list,
-        struct         = struct)
+        structure_connectivity = structure_connectivity,
+        oxidation_list         = oxid_states)
     # Add NNN features
-    structure_data : dict = nnnFeatures(SC_object = SC_object, struct = struct, structure_data = first_structure_data)
+    structure_data : dict = nnnFeatures(
+        structure_connectivity = structure_connectivity,
+        structure_data         = first_structure_data)
 
     return structure_data
 

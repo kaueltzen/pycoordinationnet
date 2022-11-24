@@ -7,8 +7,8 @@ from monty.serialization import loadfn, dumpfn
 from pymatgen.core        import Structure
 from pymatgen.ext.matproj import MPRester
 
-from crytures import crysFeaturizer
-from crytures.featurizer import analyze_env
+from crytures            import featurize
+from crytures.featurizer import analyze_environment
 from crytures.utility    import oxide_check
 
 ## -----------------------------------------------------------------------------
@@ -33,15 +33,15 @@ def get_version():
 def get_data():
     testData = []
     with MPRester(MPID) as m:
-        for i,testID in enumerate(testIDs):
+        for i, testID in enumerate(testIDs):
             testMat = dict()
             if i < 5:
                 Tstructure = m.get_structure_by_material_id(testID, conventional_unit_cell=True)
             else:
                 Tstructure = m.get_structure_by_material_id(testID, conventional_unit_cell=False)
             testMat['material_id'] = testID
-            testMat['structure'] = Tstructure
-            testMat['formula']=Tstructure.formula
+            testMat['structure'  ] = Tstructure
+            testMat['formula'    ] = Tstructure.formula
             testData.append(testMat)
 
     return np.array(testData)
@@ -75,8 +75,8 @@ def groundtruth_env(testData):
     # This is used to calculate and save the actual results of the tests. Not to be included in the test script.
     analyze_env_dict = dict()
     for Tdatum in testData:
-        oxid_states, sc = analyze_env(Tdatum['structure'], mystrategy = 'simple')
-        analyze_env_dict[Tdatum['material_id']] = dict([('oxid_states', oxid_states), ('sc', sc)])
+        structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], mystrategy = 'simple')
+        analyze_env_dict[Tdatum['material_id']] = dict([('oxid_states', oxid_states), ('sc', structure_connectivity)])
 
     dumpfn(analyze_env_dict, "test_env.json.gz")
 
@@ -84,14 +84,9 @@ def groundtruth_env(testData):
 
 def groundtruth_features(testData):
     # This is used to calculate and save the actual results of the tests. Not to be included in the test script.
-    analyze_env_dict = loadfn("test_env.json.gz")
-
     crysFeaturizer_dict = dict()
     for Tdatum in testData:
-        actual_structure_data = crysFeaturizer(
-            SC_object      = analyze_env_dict[Tdatum['material_id']]['sc'],
-            oxidation_list = analyze_env_dict[Tdatum['material_id']]['oxid_states'])
-        crysFeaturizer_dict[Tdatum['material_id']] = actual_structure_data
+        crysFeaturizer_dict[Tdatum['material_id']] = featurize(Tdatum['structure'])
 
     dumpfn(crysFeaturizer_dict, "test_features.json.gz")
 

@@ -2,10 +2,8 @@ from setuptools import setup
 
 setup(name='crytures',
       version='0.0.1',
-      description='CRYstal feaTURES',
+      description='CRYstal feaTURES (CRYTURES)',
       long_description='file: README.md',
-      author='Philipp Benner',
-      author_email='philipp.benner@gmail.com',
       license='MIT',
       classifiers=[
           'Natural Language :: English',
@@ -14,5 +12,5 @@ setup(name='crytures',
       ],
       packages=['crytures'],
       install_requires=['numpy', 'pymatgen'],
-      python_requires='>3.9',
+      python_requires='>=3.9',
       )

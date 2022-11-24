@@ -5,8 +5,8 @@ import pytest
 from pymatgen.core import Structure
 from monty.serialization import loadfn
 
-from crytures import crysFeaturizer, mp_icsd_clean
-from crytures.featurizer import analyze_env
+from crytures            import featurize, mp_icsd_clean
+from crytures.featurizer import analyze_environment, firstDegreeFeatures
 from crytures.utility    import oxide_check
 
 ## -----------------------------------------------------------------------------
@@ -60,9 +60,11 @@ def test_oxide_check(actual_oxide_check, testDataFix):
 def actual_analyze_env():
     return loadfn(os.path.join(root, 'test_env.json.gz'))
 
+## -----------------------------------------------------------------------------
+
 def test_analyze_env(actual_analyze_env, testDataFix):    
     for Tdatum in testDataFix:
-        oxid_states, sc = analyze_env(Tdatum['structure'], mystrategy='simple')
+        sc, oxid_states = analyze_environment(Tdatum['structure'], mystrategy='simple')
         assert oxid_states == actual_analyze_env[Tdatum['material_id']]['oxid_states']
         assert sc.as_dict()['connectivity_graph'] == actual_analyze_env[Tdatum['material_id']]['sc'].as_dict()['connectivity_graph']
 
@@ -77,11 +79,12 @@ def actual_crysFeaturizer():
 
 ## -----------------------------------------------------------------------------
 
-def test_firstDegreeFeatures(actual_crysFeaturizer, actual_analyze_env):
-    for matID in actual_crysFeaturizer.keys():
-        featureTest_dict = crysFeaturizer(
-            SC_object      = actual_analyze_env[matID]['sc'],
-            oxidation_list = actual_analyze_env[matID]['oxid_states'])
+def test_firstDegreeFeatures(actual_crysFeaturizer, testDataFix):
+    for Tdatum in testDataFix:
+        matID = Tdatum['material_id']
+
+        structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], mystrategy = 'simple')
+        featureTest_dict = firstDegreeFeatures(structure_connectivity, oxid_states)
 
         for atomIndex in actual_crysFeaturizer[matID].keys(): 
             assert(actual_crysFeaturizer[matID][atomIndex]['oxidation'] == featureTest_dict[atomIndex]['oxidation'])
@@ -92,27 +95,66 @@ def test_firstDegreeFeatures(actual_crysFeaturizer, actual_analyze_env):
             if actual_crysFeaturizer[matID][atomIndex]['ion'] == 'cation':
                 assert(actual_crysFeaturizer[matID][atomIndex]['localEnv'] == featureTest_dict[atomIndex]['localEnv'])
                 for d, NN in enumerate(actual_crysFeaturizer[matID][atomIndex]['NN_distances']):
-                    assert(pytest.approx(NN[0],0.001) == featureTest_dict[atomIndex]['NN_distances'][d][0]) #Nneighbor distance
-                    assert(NN[1] == featureTest_dict[atomIndex]['NN_distances'][d][1]) #neigbor element
+                    # Test Nneighbor distance
+                    assert(pytest.approx(NN[0],0.001) == featureTest_dict[atomIndex]['NN_distances'][d][0])
+                    # Test neigbor element
+                    assert(NN[1] == featureTest_dict[atomIndex]['NN_distances'][d][1])
 
 ## -----------------------------------------------------------------------------
 
-def test_nnnFeatures(actual_crysFeaturizer, actual_analyze_env):    
-    for matID in actual_crysFeaturizer.keys():
+def test_nnnFeatures(actual_crysFeaturizer, testDataFix):    
+    for Tdatum in testDataFix:
+        matID = Tdatum['material_id']
 
-        featureTest_dict = crysFeaturizer(
-            SC_object      = actual_analyze_env[matID]['sc'],
-            oxidation_list = actual_analyze_env[matID]['oxid_states'])
+        featureTest_dict = featurize(Tdatum['structure'])
 
-        for atomIndex in actual_crysFeaturizer[matID].keys(): 
+        for atomIndex in actual_crysFeaturizer[matID].keys():
+
+            # Make sure the atom order is preserved
+            assert (actual_crysFeaturizer[matID][atomIndex]['coords'] == featureTest_dict[atomIndex]['coords']).all()
 
             if actual_crysFeaturizer[matID][atomIndex]['ion'] == 'cation':
+                distances_true = []
+                distances_test = []
+                elements_true  = []
+                elements_test  = []
                 for p, NNN in enumerate(actual_crysFeaturizer[matID][atomIndex]['poly_distances']):
-                    assert(pytest.approx(NNN[0],0.001) == featureTest_dict[atomIndex]['poly_distances'][p][0]) #NNN distance
-                    assert(NNN[1] == featureTest_dict[atomIndex]['poly_distances'][p][1]) #NNN element
+                    # Extract NNN distance
+                    distances_true.append(round(NNN[0], 3))
+                    distances_test.append(round(featureTest_dict[atomIndex]['poly_distances'][p][0], 3))
+                    # Extract NNN element
+                    elements_true.append(NNN[1])
+                    elements_test.append(featureTest_dict[atomIndex]['poly_distances'][p][1])
 
-                for c, connectivity in enumerate(actual_crysFeaturizer[matID][atomIndex]['connectivity_angles']):
-                    assert(connectivity[0]==featureTest_dict[atomIndex]['connectivity_angles'][c][0]) #checks connectivity type (cornder/edge/face/noConnection)
+                assert(np.all(np.sort(distances_true) == np.sort(distances_test)))
+                assert(np.all(np.sort( elements_true) == np.sort( elements_test)))
+
+                types_true    = []
+                types_test    = []
+                angles_true   = []
+                angles_test   = []
+                elements_true = []
+                elements_test = []
+                for connectivity in actual_crysFeaturizer[matID][atomIndex]['connectivity_angles']:
+                    # Check connectivity type (cornder/edge/face/noConnection)
+                    types_true.append(connectivity[0]['kind'])
+
                     for connectivityIndex in range(1, len(connectivity)):
-                        assert(pytest.approx(connectivity[connectivityIndex][0], 0.001)==featureTest_dict[atomIndex]['connectivity_angles'][c][connectivityIndex][0])#angle
-                        assert(connectivity[connectivityIndex][1]==featureTest_dict[atomIndex]['connectivity_angles'][c][connectivityIndex][1])#element
+                        # Extract angles
+                        angles_true.append(round(connectivity[connectivityIndex][0], 3))
+                        # Extract elements
+                        elements_true.append(connectivity[connectivityIndex][1])
+
+                for connectivity in featureTest_dict[atomIndex]['connectivity_angles']:
+                    # Check connectivity type (cornder/edge/face/noConnection)
+                    types_test.append(connectivity[0]['kind'])
+
+                    for connectivityIndex in range(1, len(connectivity)):
+                        # Extract angles
+                        angles_test.append(round(connectivity[connectivityIndex][0], 3))
+                        # Extract elements
+                        elements_test.append(connectivity[connectivityIndex][1])
+
+                assert(np.all(np.sort(   types_true) == np.sort(   types_test)))
+                assert(np.all(np.sort(  angles_true) == np.sort(  angles_test)))
+                assert(np.all(np.sort(elements_true) == np.sort(elements_test)))
