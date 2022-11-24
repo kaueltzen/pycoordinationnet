@@ -26,12 +26,12 @@ def analyze_environment(structure : Structure, mystrategy : str = "simple") -> t
     First, BVAnalyzer() calculates the oxidation states. Then, the LocalGeometryFinder() computes the structure_environment object, 
     from which the LightStructureEnvironment (LSE) is derived. Finally, The ConnectivityFinder() builds the StructureConnectivity (SE) based on LSE. 
     At the end only the SE is returned, as it includes the LSE object as an attribute.
-    Parameters:
-    ----------------
-    struc : Structure 
-        crystal Structure object from pymatgen
-    mystrategy : string
-	    The simple or combined strategy for calculating the coordination environments.
+
+    Args:
+        struc (Structure):
+            crystal Structure object from pymatgen
+        mystrategy (string):
+	        The simple or combined strategy for calculating the coordination environments
     '''
     if mystrategy == "simple":
         strategy = SimplestChemenvStrategy(distance_cutoff=1.4, angle_cutoff=0.3)
@@ -75,12 +75,12 @@ def analyze_environment(structure : Structure, mystrategy : str = "simple") -> t
 def chunker(seq : Sequence, size : int) -> Generator[Any, None, None]:
     '''
     Chunks the indices of an iterable object to pieces of a given size.
-    Parameters:
-    ----------------
-    seq : Iterable 
-        The iterable object (list, tuple etc) to be chunked in smaller pieces.
-    size : int
-        the length of each chunk (not necessarily the last one).
+
+    Args:
+        seq (Iterable):
+            The iterable object (list, tuple etc) to be chunked in smaller pieces.
+        size (int):
+            the length of each chunk (not necessarily the last one).
     '''
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
@@ -92,13 +92,15 @@ def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidatio
     returns them as a dictionary. These features are stored for each atom, under their structure index.
     Features Include: Oxidation number, type of ion, element, coordination for all atoms.
     Cation specific features are the local(coordination) env and nearest neighbor elements & distances.
-    Parameters:
-    ----------------
-    SC_object : StructureConnectivity
-    oxidation_list : list[int]
-        A list of oxidation numbers of the atoms in the crystal with the same order as the atoms' index.
-    struct : Structure
-        crystal Structure object from pymatgen
+
+    Args:
+        structure_connectivity (StructureConnectivity):
+            The connectivity structure of the material
+        oxidation_list (list[int]):
+            A list of oxidation numbers of the atoms in the crystal with the same order as the atoms' index.
+
+    Returns:
+        A dictionary with first degree features
     '''
 
     structure = structure_connectivity.light_structure_environments.structure
@@ -146,15 +148,16 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
     for each atom, under their structure index. NNN features Include: Polhedral neighbor
     elements, distances, connectivity angles & types. 
 
-    Parameters:
-    ----------------
-    SC_object : StructureConnectivity
-    oxidation_list : list[int]
-        A list of oxidation numbers of the atoms in the crystal with the same order as the atoms' index.
-    struct : Structure
-        crystal Structure object from pymatgen
-    structure_data : dict
-        A dictionary containing primary features of the crystal. The NNN features will be added under the same atom index.
+    Args:
+        structure_connectivity (StructureConnectivity):
+            The connectivity structure of the material
+        structure_data (dict):
+            A dictionary containing primary features of the crystal. The NNN features
+            will be added under the same atom index.
+    
+    Returns:
+        A dictionary with next nearest neighbor features added to the structure_data
+        object
     '''
 
     structure = structure_connectivity.light_structure_environments.structure
@@ -238,7 +241,10 @@ def featurize(structure : Structure, env_strategy = 'simple') -> dict:
     polhedral neighbor elements, distances, connectivity angles & types. 
 
     Args:
-        structure (Structure): A pymatgen structure object
+        structure (Structure):
+            A pymatgen structure object
+        env_strategy (string):
+            The strategy used for computing environments
     
     Returns:
         A dictionary of features for each atom in the structure
