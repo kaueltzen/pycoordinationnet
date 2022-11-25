@@ -133,7 +133,7 @@ def test_nnnFeatures(features_true_list, testData):
                 elements_test = []
                 for connectivity in features_true[atomIndex]['connectivity_angles']:
                     # Check connectivity type (cornder/edge/face/noConnection)
-                    types_true.append(connectivity[0]['kind'])
+                    types_true.append(connectivity[0])
 
                     for connectivityIndex in range(1, len(connectivity)):
                         # Extract angles
@@ -143,7 +143,7 @@ def test_nnnFeatures(features_true_list, testData):
 
                 for connectivity in features_test[atomIndex]['connectivity_angles']:
                     # Check connectivity type (cornder/edge/face/noConnection)
-                    types_test.append(connectivity[0]['kind'])
+                    types_test.append(connectivity[0])
 
                     for connectivityIndex in range(1, len(connectivity)):
                         # Extract angles

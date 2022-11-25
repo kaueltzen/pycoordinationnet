@@ -72,36 +72,36 @@ def mp_icsd_query(MPID : str, experimental_data = True) -> str:
     '''
     # Request below is just made to print the version of the database and pymatgen
     response = requests.get(
-        "https://www.materialsproject.org/rest/v2/materials/mp-1234/vasp",
-        {"API_KEY": MPID})
+        'https://www.materialsproject.org/rest/v2/materials/mp-1234/vasp',
+        {'API_KEY': MPID})
     response_data = json.loads(response.text)
     print(response_data.get('version'))
     # Request above is just made to print the version of the database and pymatgen
 
     if experimental_data:
         criteria = {
-                "icsd_ids": {"$ne": []}, # Allows data with existing "icsd_ids" tag
-                "theoretical": {"$ne": experimental_data}, # Allows data without the "theoretical" tag
-                "elements": {"$all": ["O"]}, # Allows for crystals with Oxygen present
-                "oxide_type": {"$all": ["oxide"]}, # Allows for oxides (e.g. not peroxide)
-                "nelements": {"$gte": 2}, # Allows crystals with at least 2 elements
-                "nsites" : {"$lte": 12} }
+                'icsd_ids': {'$ne': []}, # Allows data with existing 'icsd_ids' tag
+                'theoretical': {'$ne': experimental_data}, # Allows data without the 'theoretical' tag
+                'elements': {'$all': ['O']}, # Allows for crystals with Oxygen present
+                'oxide_type': {'$all': ['oxide']}, # Allows for oxides (e.g. not peroxide)
+                'nelements': {'$gte': 2}, # Allows crystals with at least 2 elements
+                'nsites' : {'$lte': 12} }
     else:
         criteria = {
-                # We don't need this limit for theoretical data "icsd_ids": {"$ne": []}, #allows data with existing "icsd_ids" tag
-                "theoretical": {"$ne": experimental_data}, #allows data without the "theoretical" tag
-                "elements": {"$all": ["O"]}, #allows for crystals with Oxygen present
-                "oxide_type": {"$all": ["oxide"]}, #allows for oxides (e.g. not peroxide)
-                "nelements": {"$gte": 2}, #allows crystals with at least 2 elements
-                "nsites" : {"$lte": 12} }
+                # We don't need this limit for theoretical data 'icsd_ids': {'$ne': []}, #allows data with existing 'icsd_ids' tag
+                'theoretical': {'$ne': experimental_data}, #allows data without the 'theoretical' tag
+                'elements': {'$all': ['O']}, #allows for crystals with Oxygen present
+                'oxide_type': {'$all': ['oxide']}, #allows for oxides (e.g. not peroxide)
+                'nelements': {'$gte': 2}, #allows crystals with at least 2 elements
+                'nsites' : {'$lte': 12} }
 
     with MPRester(api_key=MPID) as mpr:
 
         data = mpr.query(
             criteria,
             properties = [
-                "exp.tags", "icsd_ids", "formula", "pretty_formula", "structure",
-                "material_id", "theoretical", "formation_energy_per_atom", "e_above_hull" ])
+                'exp.tags', 'icsd_ids', 'formula', 'pretty_formula', 'structure',
+                'material_id', 'theoretical', 'formation_energy_per_atom', 'e_above_hull' ])
 
     # Converts list to array, much faster to work with
     data = np.array(data)
@@ -127,7 +127,7 @@ def mp_icsd_clean(arrdata, reportBadData : bool = False) -> str:
         Returns the four lists of undesired data which is removed during this cleaning. Useful for testing.
     '''
 
-    print("The initial data length is", len(arrdata))
+    print('The initial data length is', len(arrdata))
 
     other_anion_IDs     = []
     other_oxidation_IDs = []
@@ -137,7 +137,7 @@ def mp_icsd_clean(arrdata, reportBadData : bool = False) -> str:
     for j, datum in enumerate(arrdata):
         
         try:
-            other_anion, other_oxidation, bad_structure, primStruc = oxide_check(initStruc=datum["structure"])
+            other_anion, other_oxidation, bad_structure, primStruc = oxide_check(initStruc=datum['structure'])
             
             if other_anion:
                 other_anion_IDs.append([j,datum['material_id']])
@@ -147,19 +147,19 @@ def mp_icsd_clean(arrdata, reportBadData : bool = False) -> str:
             if bad_structure:
                 bad_structure_IDs.append([j,datum['material_id']])
             else:
-                datum["structure"] = primStruc
+                datum['structure'] = primStruc
 
         except ValueError: 
             valence_problem_IDs.append([j,datum['material_id']])
 
 
-    print("The number of entries with anions other than Oxygen were", len(other_anion_IDs))
+    print('The number of entries with anions other than Oxygen were', len(other_anion_IDs))
 
-    print("The number of entries with different oxidation types were", len(other_oxidation_IDs))
+    print('The number of entries with different oxidation types were', len(other_oxidation_IDs))
 
-    print("The number of entries where valence/oxidation could not be analyzed were", len(valence_problem_IDs))
+    print('The number of entries where valence/oxidation could not be analyzed were', len(valence_problem_IDs))
 
-    print("The number of entries where the primitive structure could not be calculated were", len(bad_structure_IDs))
+    print('The number of entries where the primitive structure could not be calculated were', len(bad_structure_IDs))
 
     anion_ind     = [ i[0] for i in other_anion_IDs     ]
     oxid_ind      = [ i[0] for i in other_oxidation_IDs ]
@@ -168,7 +168,7 @@ def mp_icsd_clean(arrdata, reportBadData : bool = False) -> str:
                         
     arrdata = np.delete(arrdata, [*anion_ind, *oxid_ind, *valence_ind, *structure_ind])
 
-    print("The length of data after removing undesired entries is ",len(arrdata))
+    print('The length of data after removing undesired entries is', len(arrdata))
 
     if not reportBadData:
         return arrdata

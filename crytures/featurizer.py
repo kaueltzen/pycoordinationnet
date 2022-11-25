@@ -20,7 +20,7 @@ from typing import Union
 
 ## -----------------------------------------------------------------------------
 
-def analyze_environment(structure : Structure, mystrategy : str = "simple") -> tuple[StructureConnectivity, list[int]]:
+def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> tuple[StructureConnectivity, list[int]]:
     '''
     Analyzes the coordination environments and returns the StructureConnectivity object for the crystal and the list of oxidation states.
     First, BVAnalyzer() calculates the oxidation states. Then, the LocalGeometryFinder() computes the structure_environment object, 
@@ -33,7 +33,7 @@ def analyze_environment(structure : Structure, mystrategy : str = "simple") -> t
         mystrategy (string):
 	        The simple or combined strategy for calculating the coordination environments
     '''
-    if mystrategy == "simple":
+    if mystrategy == 'simple':
         strategy = SimplestChemenvStrategy(distance_cutoff=1.4, angle_cutoff=0.3)
     else:
         strategy = mystrategy
@@ -45,7 +45,7 @@ def analyze_environment(structure : Structure, mystrategy : str = "simple") -> t
     # Backup current stdout
     old_stdout = sys.stdout
     # Avoid printing to the console 
-    sys.stdout = open(os.devnull, "w")
+    sys.stdout = open(os.devnull, 'w')
     # Print a long stroy every time it is initiated
     lgf = LocalGeometryFinder() 
     # Reset old stdout
@@ -149,6 +149,7 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
     structure = structure_connectivity.light_structure_environments.structure
     nodes     = structure_connectivity.environment_subgraph().nodes()
 
+    # Loop over all sites in the structure
     for node in nodes:
         distances   = []
         node_angles = []
@@ -156,9 +157,9 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
         for edge in structure_connectivity.environment_subgraph().edges(node, data=True):
 
             # NNN distance calculation
-            distance      = structure[edge[2]["start"]].distance(structure[edge[2]["end"]], edge[2]["delta"])
-            start_element = structure[edge[2]["start"]].species_string
-            end_element   = structure[edge[2]["end"  ]].species_string
+            distance      = structure[edge[2]['start']].distance(structure[edge[2]['end']], edge[2]['delta'])
+            start_element = structure[edge[2]['start']].species_string
+            end_element   = structure[edge[2]['end'  ]].species_string
 
             # Can't see an order on which side edge starts
             if node.atom_symbol != end_element:
@@ -172,34 +173,34 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
             distances.append(distance)
 
             # NNN angles calculation
-            ligands = edge[2]["ligands"]
+            ligands = edge[2]['ligands']
 
-            connectivity = {}
+            connectivity = ''
             if len(ligands) == 0:
-                connectivity['kind'] = "noConnection"
+                connectivity = 'noConnection'
             if len(ligands) == 1:
-                connectivity['kind'] = "corner"
+                connectivity = 'corner'
             elif len(ligands) == 2:
-                connectivity['kind'] = "edge"
+                connectivity = 'edge'
             elif len(ligands) >= 3:
-                connectivity['kind'] = "face"
+                connectivity = 'face'
             else:
                 print('There was a problem with the connectivity.')
 
             edge_angles : list[Union[list, dict]] = []
             edge_angles.append(connectivity)
             for ligand in ligands:
-                pos0 = structure[ligand[1]["start"]].frac_coords
-                pos1 = structure[ligand[1]["end"  ]].frac_coords + ligand[1]["delta"]
+                pos0 = structure[ligand[1]['start']].frac_coords
+                pos1 = structure[ligand[1]['end'  ]].frac_coords + ligand[1]['delta']
                 cart_pos0 = structure.lattice.get_cartesian_coords(pos0)
                 cart_pos1 = structure.lattice.get_cartesian_coords(pos1)
 
-                pos2 = structure[ligand[2]["start"]].frac_coords
-                pos3 = structure[ligand[2]["end"  ]].frac_coords + ligand[2]["delta"]
+                pos2 = structure[ligand[2]['start']].frac_coords
+                pos3 = structure[ligand[2]['end'  ]].frac_coords + ligand[2]['delta']
                 cart_pos2 = structure.lattice.get_cartesian_coords(pos2)
                 cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
                 
-                angle = get_angle(cart_pos0-cart_pos1, cart_pos2-cart_pos3, units="degrees")
+                angle = get_angle(cart_pos0-cart_pos1, cart_pos2-cart_pos3, units='degrees')
 
                 if edge[2]['start'] != node.isite:
                     poly_nb = structure_data[edge[2]['start']]['element']

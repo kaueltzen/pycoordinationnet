@@ -50,6 +50,7 @@ The distances to the nearest neighboring atoms are stored in the *NN_distances* 
 ```
 We see that since we have a *C:8* coordination environment that there are 8 nearest neighbors.
 
+The *poly_distance* item contains the distances of the central atom to sites connected to the coordination environment.
 
 
 ## References
