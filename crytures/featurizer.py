@@ -72,20 +72,6 @@ def analyze_environment(structure : Structure, mystrategy : str = "simple") -> t
 
 ## -----------------------------------------------------------------------------
 
-def chunker(seq : Sequence, size : int) -> Generator[Any, None, None]:
-    '''
-    Chunks the indices of an iterable object to pieces of a given size.
-
-    Args:
-        seq (Iterable):
-            The iterable object (list, tuple etc) to be chunked in smaller pieces.
-        size (int):
-            the length of each chunk (not necessarily the last one).
-    '''
-    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
-
-## -----------------------------------------------------------------------------
-
 def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> dict:
     '''
     Calculates the desired primary features (related to the atom and nearest neighbors) based on SC object, 
