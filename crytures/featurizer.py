@@ -130,7 +130,7 @@ def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidatio
 def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data : dict) -> dict:
     '''
     Calculates the desired NNN (next nearest neighbors) features based on SC object,
-    and addes them to a dictionary (of primary features). These features are stored
+    and adds them to a dictionary (of primary features). These features are stored
     for each atom, under their structure index. NNN features Include: Polhedral neighbor
     elements, distances, connectivity angles & types. 
 
