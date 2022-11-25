@@ -16,7 +16,7 @@ from pymatgen.analysis.chemenv.connectivity.connectivity_finder import Connectiv
 from pymatgen.analysis.chemenv.connectivity.structure_connectivity import StructureConnectivity
 from pymatgen.core.structure import PeriodicSite, Structure
 from pymatgen.util.coord     import get_angle
-from typing import Generator, Sequence, Any, Union
+from typing import Union
 
 ## -----------------------------------------------------------------------------
 
