@@ -29,6 +29,14 @@ The coordination environment of a site is accessed as follows:
 ```
 The *ce_symbol* specifies the symbol of the coordination environment (*ce*) as defined in the supplementary material of *Waroquiers et al. 2020* [1]. In this example we have *C:8* which refers to a cube where the central site has 8 neighbors. Each coordination environment is attributed a fraction given by the *ce_fraction* item. Since we have only a single coordination environment in this example, we have a *ce_fraction* of one. The Continuous Symmetry Measure (*CSM*) specifies the distance of the coordination environment to the perfect model environment (given by the *csm* item) [2]. The CSM value ranges between zero and 100, where a value of zero represents a perfect match. To compute the similarity of the coordination environment, all possible permutations of neighboring sites must be tested. The permutation with the minimal CSM is given by the *permutation* item.
 
+Note that sites close to faces will not have a coordination environment and therefore also no features:
+```python
+>>> features[63].keys()
+dict_keys(['oxidation', 'ion', 'element', 'coords', 'localEnv', 'NN_distances', 'poly_distances', 'connectivity_angles'])
+>>> features[64].keys()
+dict_keys(['oxidation', 'ion', 'element', 'coords'])
+```
+
 ### Distances and angles
 
 The distances to the nearest neighboring atoms are stored in the *NN_distances* item:
