@@ -176,9 +176,9 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
             ligands = edge[2]['ligands']
 
             connectivity = ''
-            if len(ligands) == 0:
+            if   len(ligands) == 0:
                 connectivity = 'noConnection'
-            if len(ligands) == 1:
+            if   len(ligands) == 1:
                 connectivity = 'corner'
             elif len(ligands) == 2:
                 connectivity = 'edge'
