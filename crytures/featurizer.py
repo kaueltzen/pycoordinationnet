@@ -182,10 +182,8 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
                 connectivity = 'corner'
             elif len(ligands) == 2:
                 connectivity = 'edge'
-            elif len(ligands) >= 3:
-                connectivity = 'face'
             else:
-                print('There was a problem with the connectivity.')
+                connectivity = 'face'
 
             edge_angles : list[Union[list, dict]] = []
             edge_angles.append(connectivity)
