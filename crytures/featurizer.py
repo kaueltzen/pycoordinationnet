@@ -192,11 +192,11 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
             for ligand in ligands:
                 pos0 = structure[ligand[1]['start']].frac_coords
                 pos1 = structure[ligand[1]['end'  ]].frac_coords + ligand[1]['delta']
-                cart_pos0 = structure.lattice.get_cartesian_coords(pos0)
-                cart_pos1 = structure.lattice.get_cartesian_coords(pos1)
-
                 pos2 = structure[ligand[2]['start']].frac_coords
                 pos3 = structure[ligand[2]['end'  ]].frac_coords + ligand[2]['delta']
+
+                cart_pos0 = structure.lattice.get_cartesian_coords(pos0)
+                cart_pos1 = structure.lattice.get_cartesian_coords(pos1)
                 cart_pos2 = structure.lattice.get_cartesian_coords(pos2)
                 cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
                 
