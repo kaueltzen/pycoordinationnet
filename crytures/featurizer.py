@@ -177,7 +177,7 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
 
             connectivity = ''
             if   len(ligands) == 0:
-                connectivity = 'noConnection'
+                connectivity = 'isolated'
             if   len(ligands) == 1:
                 connectivity = 'corner'
             elif len(ligands) == 2:
