@@ -108,11 +108,11 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
             # Skip further featurization. We're not analyzing envs with anions
             continue
 
-        structure_data[atomIndex]['ion'         ] = 'cation'
-        structure_data[atomIndex]['element'     ] = structure[atomIndex].species_string
-        structure_data[atomIndex]['coords'      ] = structure[atomIndex].coords
-        structure_data[atomIndex]['localEnv'    ] = local_Envs_list[atomIndex]
-        structure_data[atomIndex]['NN_distances'] = []
+        structure_data[atomIndex]['ion'      ] = 'cation'
+        structure_data[atomIndex]['element'  ] = structure[atomIndex].species_string
+        structure_data[atomIndex]['coords'   ] = structure[atomIndex].coords
+        structure_data[atomIndex]['localEnv' ] = local_Envs_list[atomIndex]
+        structure_data[atomIndex]['distances'] = []
 
         neighbors = atom[0].neighb_sites_and_indices
         for nb in neighbors:
@@ -121,7 +121,7 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
             site = PeriodicSite.from_dict(nb['site'].as_dict())
             nb_element  = site.species_string
             nb_distance = site.distance_from_point(structure[atomIndex].coords)
-            structure_data[atomIndex]['NN_distances'].append([nb_distance, nb_element])
+            structure_data[atomIndex]['distances'].append([nb_distance, nb_element])
     
     return structure_data
 
@@ -217,8 +217,8 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
 
             node_angles.append(edge_angles)
 
-        structure_data[node.isite]['poly_distances'     ] = distances 
-        structure_data[node.isite]['connectivity_angles'] = node_angles
+        structure_data[node.isite]['ce_distances'] = distances 
+        structure_data[node.isite]['ce_angles'   ] = node_angles
     
     return structure_data
 

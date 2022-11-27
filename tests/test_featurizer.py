@@ -90,11 +90,11 @@ def test_firstDegreeFeatures(features_true_list, testData):
 
             if features_true[atomIndex]['ion'] == 'cation':
                 assert(features_true[atomIndex]['localEnv'] == features_test[atomIndex]['localEnv'])
-                for d, NN in enumerate(features_true[atomIndex]['NN_distances']):
+                for k, neighbor in enumerate(features_true[atomIndex]['distances']):
                     # Test Nneighbor distance
-                    assert(pytest.approx(NN[0],0.001) == features_test[atomIndex]['NN_distances'][d][0])
+                    assert(pytest.approx(neighbor[0], 0.001) == features_test[atomIndex]['distances'][k][0])
                     # Test neigbor element
-                    assert(NN[1] == features_test[atomIndex]['NN_distances'][d][1])
+                    assert(neighbor[1] == features_test[atomIndex]['distances'][k][1])
 
 ## -----------------------------------------------------------------------------
 
@@ -114,13 +114,13 @@ def test_nnnFeatures(features_true_list, testData):
                 distances_test = []
                 elements_true  = []
                 elements_test  = []
-                for p, NNN in enumerate(features_true[atomIndex]['poly_distances']):
+                for p, NNN in enumerate(features_true[atomIndex]['ce_distances']):
                     # Extract NNN distance
                     distances_true.append(round(NNN[0], 3))
-                    distances_test.append(round(features_test[atomIndex]['poly_distances'][p][0], 3))
+                    distances_test.append(round(features_test[atomIndex]['ce_distances'][p][0], 3))
                     # Extract NNN element
                     elements_true.append(NNN[1])
-                    elements_test.append(features_test[atomIndex]['poly_distances'][p][1])
+                    elements_test.append(features_test[atomIndex]['ce_distances'][p][1])
 
                 assert(np.all(np.sort(distances_true) == np.sort(distances_test)))
                 assert(np.all(np.sort( elements_true) == np.sort( elements_test)))
@@ -131,7 +131,7 @@ def test_nnnFeatures(features_true_list, testData):
                 angles_test   = []
                 elements_true = []
                 elements_test = []
-                for connectivity in features_true[atomIndex]['connectivity_angles']:
+                for connectivity in features_true[atomIndex]['ce_angles']:
                     # Check connectivity type (cornder/edge/face/noConnection)
                     types_true.append(connectivity[0])
 
@@ -141,7 +141,7 @@ def test_nnnFeatures(features_true_list, testData):
                         # Extract elements
                         elements_true.append(connectivity[connectivityIndex][1])
 
-                for connectivity in features_test[atomIndex]['connectivity_angles']:
+                for connectivity in features_test[atomIndex]['ce_angles']:
                     # Check connectivity type (cornder/edge/face/noConnection)
                     types_test.append(connectivity[0])
 
