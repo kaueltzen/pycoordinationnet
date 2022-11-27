@@ -52,12 +52,19 @@ dict_keys(['oxidation', 'ion', 'element', 'coordinates'])
 The distances between the center atom to the nearest neighboring atoms (ligands) are stored in the *distances* item:
 ```python
 >>> features[0]['distances']
-[[2.341961770123179, 'O'], [2.341961770123178, 'O'], [2.4321915059077597, 'O'], [2.341961770123179, 'O'], [2.43219150590776, 'O'], [2.3419617701231785, 'O'], [2.43219150590776, 'O'], [2.43219150590776, 'O']]
+[('Er', 'O', 2.341961770123179), ('Er', 'O', 2.341961770123178), ('Er', 'O', 2.4321915059077597), ('Er', 'O', 2.341961770123179), ('Er', 'O', 2.43219150590776), ('Er', 'O', 2.3419617701231785), ('Er', 'O', 2.43219150590776), ('Er', 'O', 2.43219150590776)]
 ```
 We see that since we have a *C:8* coordination environment that there are 8 nearest neighbors.
 
-The *ce_distance* item contains the distances to neighboring coordination environments, always measured from the center atoms. Similarly, the *ce_angles* item contains the angle between neighboring coordination environments.
-
+The *ce_distance* item contains the distances to neighboring coordination environments, always measured from the center atoms.
+```python
+[('Er', 'Er', 3.781941127654686), ('Er', 'Er', 3.781941127654686), ('Er', 'Er', 3.781941127654686), ('Er', 'Er', 3.781941127654686), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.087942), ('Er', 'Ga', 3.452424111288328), ('Er', 'Ga', 3.452424111288328), ('Er', 'Ga', 3.087942), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.452424111288328), ('Er', 'Ga', 3.452424111288328)]
+```
+Similarly, the *ce_angles* item contains the angle between neighboring coordination environments.
+```python
+[['edge', ('Er', 'O', 'Er', 104.76176533545028), ('Er', 'O', 'Er', 104.76176533545029)], ['edge', ('Er', 'O', 'Er', 104.76176533545029), ('Er', 'O', 'Er', 104.76176533545028)], ['edge', ('Er', 'O', 'Er', 104.76176533545026), ('Er', 'O', 'Er', 104.76176533545035)], ['edge', ('Er', 'O', 'Er', 104.76176533545026), ('Er', 'O', 'Er', 104.76176533545028)], ['corner', ('Er', 'O', 'Ga', 122.8127776876257)], ['corner', ('Er', 'O', 'Ga', 122.81277768762573)], ['corner', ('Er', 'O', 'Ga', 122.81277768762573)], ['edge', ('Er', 'O', 'Ga', 93.78531247833918), ('Er', 'O', 'Ga', 93.78531247833915)], ['edge', ('Er', 'O', 'Ga', 104.54130312850349), ('Er', 'O', 'Ga', 101.4103174150423)], ['edge', ('Er', 'O', 'Ga', 104.54130312850347), ('Er', 'O', 'Ga', 101.41031741504229)], ['edge', ('Er', 'O', 'Ga', 93.78531247833916), ('Er', 'O', 'Ga', 93.78531247833918)], ['corner', ('Er', 'O', 'Ga', 122.81277768762573)], ['edge', ('Er', 'O', 'Ga', 104.54130312850349), ('Er', 'O', 'Ga', 101.41031741504227)], ['edge', ('Er', 'O', 'Ga', 104.54130312850346), ('Er', 'O', 'Ga', 101.41031741504229)]]
+```
+Note that distances and angles are computed for all neighbors by considering symmetries stemming from the periodic boundary conditions.
 
 ## References
 

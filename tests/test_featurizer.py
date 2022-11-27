@@ -92,9 +92,9 @@ def test_firstDegreeFeatures(features_true_list, testData):
                 assert(features_true[atomIndex]['ce'] == features_test[atomIndex]['ce'])
                 for k, neighbor in enumerate(features_true[atomIndex]['distances']):
                     # Test neighbor distance
-                    assert(pytest.approx(neighbor[0], 0.001) == features_test[atomIndex]['distances'][k][0])
+                    assert(pytest.approx(neighbor[1], 0.001) == features_test[atomIndex]['distances'][k][1])
                     # Test neigbor element
-                    assert(neighbor[1] == features_test[atomIndex]['distances'][k][1])
+                    assert(neighbor[0] == features_test[atomIndex]['distances'][k][0])
 
 ## -----------------------------------------------------------------------------
 
@@ -116,8 +116,8 @@ def test_nnnFeatures(features_true_list, testData):
                 elements_test  = []
                 for p, nnn in enumerate(features_true[atomIndex]['ce_distances']):
                     # Extract NNN distance
-                    distances_true.append(round(nnn[0], 3))
-                    distances_test.append(round(features_test[atomIndex]['ce_distances'][p][0], 3))
+                    distances_true.append(round(nnn[2], 3))
+                    distances_test.append(round(features_test[atomIndex]['ce_distances'][p][2], 3))
                     # Extract NNN element
                     elements_true.append(nnn[1])
                     elements_test.append(features_test[atomIndex]['ce_distances'][p][1])
@@ -137,9 +137,9 @@ def test_nnnFeatures(features_true_list, testData):
 
                     for connectivityIndex in range(1, len(connectivity)):
                         # Extract angles
-                        angles_true.append(round(connectivity[connectivityIndex][0], 3))
+                        angles_true.append(round(connectivity[connectivityIndex][3], 3))
                         # Extract elements
-                        elements_true.append(connectivity[connectivityIndex][1])
+                        elements_true.append(connectivity[connectivityIndex][2])
 
                 for connectivity in features_test[atomIndex]['ce_angles']:
                     # Check connectivity type (cornder/edge/face/noConnection)
@@ -147,9 +147,9 @@ def test_nnnFeatures(features_true_list, testData):
 
                     for connectivityIndex in range(1, len(connectivity)):
                         # Extract angles
-                        angles_test.append(round(connectivity[connectivityIndex][0], 3))
+                        angles_test.append(round(connectivity[connectivityIndex][3], 3))
                         # Extract elements
-                        elements_test.append(connectivity[connectivityIndex][1])
+                        elements_test.append(connectivity[connectivityIndex][2])
 
                 assert(np.all(np.sort(   types_true) == np.sort(   types_test)))
                 assert(np.all(np.sort(  angles_true) == np.sort(  angles_test)))

@@ -121,7 +121,8 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
             site = PeriodicSite.from_dict(nb['site'].as_dict())
             nb_element  = site.species_string
             nb_distance = site.distance_from_point(structure[atomIndex].coords)
-            structure_data[atomIndex]['distances'].append([nb_distance, nb_element])
+            structure_data[atomIndex]['distances'].append(
+                (structure[atomIndex].species_string, nb_element, nb_distance))
     
     return structure_data
 
@@ -168,7 +169,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
                 # This way if the 2 elements are different, the other name is saved.
                 neighbor_element = start_element
 
-            distance = [distance, neighbor_element]
+            distance = (node.atom_symbol, neighbor_element, distance)
             # Record as distance for this edge (NNN) and for this node (atom of interest)
             distances.append(distance)
 
@@ -224,9 +225,9 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
                 assert ligand[0] == ligand[2]['end']
 
                 edge_angles.append((
-                    structure_data[istart]['element'],
-                    structure_data[imid  ]['element'],
-                    structure_data[iend  ]['element'],
+                    structure[istart].species_string,
+                    structure[imid  ].species_string,
+                    structure[iend  ].species_string,
                     angle
                 ))
 
