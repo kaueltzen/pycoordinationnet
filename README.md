@@ -1,6 +1,6 @@
 ## CRYstal feaTURES (CRYTURES)
 
-This packages uses *pymatgen* to compute coordination environments, their distances, and angles. The output is such that it can be used as features for machine learning models.
+This packages uses *pymatgen* to compute coordination environments, their distances and angles. The output is such that it can be used as features for machine learning models.
 
 A coordination environment consists of a central atom or ion, which is usually metallic and is called the coordination centre. It is surrounded by several bounding ions that are called ligands. The position of ligands defines the shape of the coordination environment, which is described in terms of the coordination number (number of ligands) and a symbol for the shape of the environment (e.g. C for cubic)
 
