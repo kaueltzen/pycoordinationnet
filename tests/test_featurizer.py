@@ -85,11 +85,11 @@ def test_firstDegreeFeatures(features_true_list, testData):
         for atomIndex in features_true.keys(): 
             assert(features_true[atomIndex]['oxidation'] == features_test[atomIndex]['oxidation'])
             assert(features_true[atomIndex]['element'  ] == features_test[atomIndex]['element'])
-            np.testing.assert_allclose(features_true[atomIndex]['coords'], features_test[atomIndex]['coords'])
+            np.testing.assert_allclose(features_true[atomIndex]['coordinates'], features_test[atomIndex]['coordinates'])
             assert(features_true[atomIndex]['ion'] == features_test[atomIndex]['ion'])
 
             if features_true[atomIndex]['ion'] == 'cation':
-                assert(features_true[atomIndex]['localEnv'] == features_test[atomIndex]['localEnv'])
+                assert(features_true[atomIndex]['ce'] == features_test[atomIndex]['ce'])
                 for k, neighbor in enumerate(features_true[atomIndex]['distances']):
                     # Test neighbor distance
                     assert(pytest.approx(neighbor[0], 0.001) == features_test[atomIndex]['distances'][k][0])
@@ -106,7 +106,7 @@ def test_nnnFeatures(features_true_list, testData):
         for atomIndex in features_true.keys():
 
             # Make sure the atom order is preserved
-            assert (features_true[atomIndex]['coords'] == features_test[atomIndex]['coords']).all()
+            assert (features_true[atomIndex]['coordinates'] == features_test[atomIndex]['coordinates']).all()
 
             if features_true[atomIndex]['ion'] == 'cation':
                 # The order of distances may vary

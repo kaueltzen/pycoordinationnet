@@ -40,11 +40,11 @@ Note that features are only computed for cations:
 >>> features[63]['ion']
 'cation'
 >>> features[63].keys()
-dict_keys(['oxidation', 'ion', 'element', 'coords', 'distances', 'ce', 'ce_distances', 'ce_angles'])
+dict_keys(['oxidation', 'ion', 'element', 'coordinates', 'distances', 'ce', 'ce_distances', 'ce_angles'])
 >>> features[64]['ion']
 'anion'
 >>> features[64].keys()
-dict_keys(['oxidation', 'ion', 'element', 'coords'])
+dict_keys(['oxidation', 'ion', 'element', 'coordinates'])
 ```
 
 ### Distances and angles
