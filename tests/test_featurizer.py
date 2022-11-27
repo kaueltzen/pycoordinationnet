@@ -114,12 +114,12 @@ def test_nnnFeatures(features_true_list, testData):
                 distances_test = []
                 elements_true  = []
                 elements_test  = []
-                for p, NNN in enumerate(features_true[atomIndex]['ce_distances']):
+                for p, nnn in enumerate(features_true[atomIndex]['ce_distances']):
                     # Extract NNN distance
-                    distances_true.append(round(NNN[0], 3))
+                    distances_true.append(round(nnn[0], 3))
                     distances_test.append(round(features_test[atomIndex]['ce_distances'][p][0], 3))
                     # Extract NNN element
-                    elements_true.append(NNN[1])
+                    elements_true.append(nnn[1])
                     elements_test.append(features_test[atomIndex]['ce_distances'][p][1])
 
                 assert(np.all(np.sort(distances_true) == np.sort(distances_test)))
