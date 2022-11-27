@@ -208,13 +208,27 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
                 # Measure the angle at the ligand
                 angle = get_angle(cart_pos0 - cart_pos1, cart_pos2 - cart_pos3, units = 'degrees')
 
-                # Get the name of the element of the other connecting cation
-                if edge[2]['start'] != node.isite:
-                    poly_nb = structure_data[edge[2]['start']]['element']
+                istart = ''
+                iend   = ''
+                imid   = ligand[0]
+                if   ligand[1]['start'] == node.isite:
+                    istart = ligand[1]['start']
+                    iend   = ligand[2]['start']
+                elif ligand[2]['start'] == node.isite:
+                    istart = ligand[2]['start']
+                    iend   = ligand[1]['start']
                 else:
-                    poly_nb = structure_data[edge[2]['end'  ]]['element']  
+                    raise ValueError(f'Ligand is not connected to center atom')
 
-                edge_angles.append([angle, poly_nb])
+                assert ligand[0] == ligand[1]['end']
+                assert ligand[0] == ligand[2]['end']
+
+                edge_angles.append((
+                    structure_data[istart]['element'],
+                    structure_data[imid  ]['element'],
+                    structure_data[iend  ]['element'],
+                    angle
+                ))
 
             node_angles.append(edge_angles)
 
