@@ -178,7 +178,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
             # Determine the type of connectivity from the number of ligands
             if   len(ligands) == 0:
                 connectivity = 'isolated'
-            if   len(ligands) == 1:
+            elif len(ligands) == 1:
                 connectivity = 'corner'
             elif len(ligands) == 2:
                 connectivity = 'edge'
