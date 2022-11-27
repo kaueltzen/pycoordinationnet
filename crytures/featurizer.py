@@ -93,7 +93,7 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
     # Take lightStructureEnvironment Obj from StructureConnecivity Obj
     lse = structure_connectivity.light_structure_environments
     # Take coordination/local environments from lightStructureEnvironment Obj
-    local_Envs_list = lse.coordination_environments
+    ce_list = lse.coordination_environments
     structure_data : dict = {}
     for atomIndex, atom in enumerate(lse.neighbors_sets):
         
@@ -101,18 +101,18 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
         structure_data[atomIndex]['oxidation'] = oxidation_list[atomIndex]
         
         if atom == None:
-            # Save coordniates here 
-            structure_data[atomIndex]['ion'    ] = 'anion'
-            structure_data[atomIndex]['element'] = structure[atomIndex].species_string
-            structure_data[atomIndex]['coords' ] = structure[atomIndex].coords
+            # Save coordinates here 
+            structure_data[atomIndex]['ion'         ] = 'anion'
+            structure_data[atomIndex]['element'     ] = structure[atomIndex].species_string
+            structure_data[atomIndex]['coordinates' ] = structure[atomIndex].coords
             # Skip further featurization. We're not analyzing envs with anions
             continue
-
-        structure_data[atomIndex]['ion'      ] = 'cation'
-        structure_data[atomIndex]['element'  ] = structure[atomIndex].species_string
-        structure_data[atomIndex]['coords'   ] = structure[atomIndex].coords
-        structure_data[atomIndex]['localEnv' ] = local_Envs_list[atomIndex]
-        structure_data[atomIndex]['distances'] = []
+    
+        structure_data[atomIndex]['ion'        ] = 'cation'
+        structure_data[atomIndex]['element'    ] = structure[atomIndex].species_string
+        structure_data[atomIndex]['coordinates'] = structure[atomIndex].coords
+        structure_data[atomIndex]['distances'  ] = []
+        structure_data[atomIndex]['ce'         ] = ce_list[atomIndex]
 
         neighbors = atom[0].neighb_sites_and_indices
         for nb in neighbors:
@@ -206,7 +206,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
                 cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
                 
                 # Measure the angle at the ligand
-                angle = get_angle(cart_pos0-cart_pos1, cart_pos2-cart_pos3, units='degrees')
+                angle = get_angle(cart_pos0 - cart_pos1, cart_pos2 - cart_pos3, units = 'degrees')
 
                 # Get the name of the element of the other connecting cation
                 if edge[2]['start'] != node.isite:
