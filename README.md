@@ -49,7 +49,7 @@ dict_keys(['oxidation', 'ion', 'element', 'coordinates'])
 
 ### Distances and angles
 
-The distances to the nearest neighboring atoms are stored in the *distances* item:
+The distances between the center atom to the nearest neighboring atoms (ligands) are stored in the *distances* item:
 ```python
 >>> features[0]['distances']
 [[2.341961770123179, 'O'], [2.341961770123178, 'O'], [2.4321915059077597, 'O'], [2.341961770123179, 'O'], [2.43219150590776, 'O'], [2.3419617701231785, 'O'], [2.43219150590776, 'O'], [2.43219150590776, 'O']]
