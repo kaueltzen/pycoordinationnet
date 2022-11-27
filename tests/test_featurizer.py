@@ -91,7 +91,7 @@ def test_firstDegreeFeatures(features_true_list, testData):
             if features_true[atomIndex]['ion'] == 'cation':
                 assert(features_true[atomIndex]['localEnv'] == features_test[atomIndex]['localEnv'])
                 for k, neighbor in enumerate(features_true[atomIndex]['distances']):
-                    # Test Nneighbor distance
+                    # Test neighbor distance
                     assert(pytest.approx(neighbor[0], 0.001) == features_test[atomIndex]['distances'][k][0])
                     # Test neigbor element
                     assert(neighbor[1] == features_test[atomIndex]['distances'][k][1])
