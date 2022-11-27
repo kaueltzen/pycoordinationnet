@@ -188,6 +188,12 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
             edge_angles : list[Union[list, dict]] = []
             edge_angles.append(connectivity)
             for ligand in ligands:
+                # Ligands/anions always have a higher atom index than cations. For the ligands list,
+                # start will always have a lower atom index than end, which means that we always start
+                # at cations and then go to the ligand.
+
+                # We consider two connecting atoms of the ligand. Get the coordinates of all three
+                # sites
                 pos0 = structure[ligand[1]['start']].frac_coords
                 pos1 = structure[ligand[1]['end'  ]].frac_coords + ligand[1]['delta']
                 pos2 = structure[ligand[2]['start']].frac_coords
@@ -198,8 +204,10 @@ def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data :
                 cart_pos2 = structure.lattice.get_cartesian_coords(pos2)
                 cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
                 
+                # Measure the angle at the ligand
                 angle = get_angle(cart_pos0-cart_pos1, cart_pos2-cart_pos3, units='degrees')
 
+                # Get the name of the element of the other connecting cation
                 if edge[2]['start'] != node.isite:
                     poly_nb = structure_data[edge[2]['start']]['element']
                 else:
