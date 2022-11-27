@@ -72,7 +72,7 @@ def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> t
 
 ## -----------------------------------------------------------------------------
 
-def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> dict:
+def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> dict:
     '''
     Calculates the desired primary features (related to the atom and nearest neighbors) based on SC object, 
     returns them as a dictionary. These features are stored for each atom, under their structure index.
@@ -127,7 +127,7 @@ def firstDegreeFeatures(structure_connectivity : StructureConnectivity, oxidatio
 
 ## -----------------------------------------------------------------------------
 
-def nnnFeatures(structure_connectivity : StructureConnectivity, structure_data : dict) -> dict:
+def compute_features_nnn(structure_connectivity : StructureConnectivity, structure_data : dict) -> dict:
     '''
     Calculates the desired NNN (next nearest neighbors) features based on SC object,
     and adds them to a dictionary (of primary features). These features are stored
@@ -245,11 +245,11 @@ def featurize(structure : Structure, env_strategy = 'simple') -> dict:
     structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
 
     # Computing first degree features
-    first_structure_data : dict = firstDegreeFeatures(
+    first_structure_data : dict = compute_features_first_degree(
         structure_connectivity = structure_connectivity,
         oxidation_list         = oxid_states)
     # Add NNN features
-    structure_data : dict = nnnFeatures(
+    structure_data : dict = compute_features_nnn(
         structure_connectivity = structure_connectivity,
         structure_data         = first_structure_data)
 

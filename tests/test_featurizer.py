@@ -6,7 +6,7 @@ from pymatgen.core import Structure
 from monty.serialization import loadfn
 
 from crytures            import featurize, mp_icsd_clean
-from crytures.featurizer import analyze_environment, firstDegreeFeatures
+from crytures.featurizer import analyze_environment, compute_features_first_degree
 from crytures.utility    import oxide_check
 
 ## -----------------------------------------------------------------------------
@@ -80,7 +80,7 @@ def test_firstDegreeFeatures(features_true_list, testData):
         features_true = features_true_list[Tdatum['material_id']]
 
         structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], mystrategy = 'simple')
-        features_test = firstDegreeFeatures(structure_connectivity, oxid_states)
+        features_test = compute_features_first_degree(structure_connectivity, oxid_states)
 
         for atomIndex in features_true.keys(): 
             assert(features_true[atomIndex]['oxidation'] == features_test[atomIndex]['oxidation'])
