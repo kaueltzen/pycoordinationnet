@@ -175,7 +175,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
             # NNN angles calculation
             ligands = edge[2]['ligands']
 
-            connectivity = ''
+            # Determine the type of connectivity from the number of ligands
             if   len(ligands) == 0:
                 connectivity = 'isolated'
             if   len(ligands) == 1:
@@ -187,6 +187,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
 
             edge_angles : list[Union[list, dict]] = []
             edge_angles.append(connectivity)
+            # For each ligand compute the angle to another coordination environment (central atom)
             for ligand in ligands:
                 # Ligands/anions always have a higher atom index than cations. For the ligands list,
                 # start will always have a lower atom index than end, which means that we always start
