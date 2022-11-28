@@ -192,9 +192,9 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
             edge_angles.append(connectivity)
             # For each ligand compute the angle to another coordination environment (central atom)
             for ligand in ligands:
-                # Ligands/anions always have a higher atom index than cations. For the ligands list,
-                # start will always have a lower atom index than end, which means that we always start
-                # at cations and then go to the ligand.
+                # The ligand item contains a path one central atom (cation) to another central atom
+                # along a single ligand (anions). The `start` item always points to a central atom,
+                # while the end will be the ligand.
 
                 # We consider two connecting atoms of the ligand. Get the coordinates of all three
                 # sites
