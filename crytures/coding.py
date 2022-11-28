@@ -2,6 +2,7 @@
 from enum import Enum
 
 from pymatgen.core.periodic_table import Element
+from pymatgen.analysis.chemenv.coordination_environments.coordination_geometries import AllCoordinationGeometries
 
 ## -----------------------------------------------------------------------------
 
@@ -13,6 +14,11 @@ class AngleTypes(Enum):
 
 ## -----------------------------------------------------------------------------
 
+geometryDecoder = { i: geometry.mp_symbol for i, geometry in enumerate(AllCoordinationGeometries().get_geometries()) }
+geometryEncoder = { geometry.mp_symbol: i for i, geometry in enumerate(AllCoordinationGeometries().get_geometries()) }
+
+## -----------------------------------------------------------------------------
+
 NumElements = len(Element)
 
 # https://en.wikipedia.org/wiki/Oxidation_state:
@@ -20,8 +26,7 @@ NumElements = len(Element)
 # The lowest oxidation state is −5, as for boron in Al3BC.
 NumOxidations = 15
 NumAngleTypes = len(AngleTypes)
-
-## -----------------------------------------------------------------------------
+NumGeometries = len(geometryEncoder)
 
 ## -----------------------------------------------------------------------------
 
@@ -77,6 +82,24 @@ def decode_distances(distances : list) -> list:
 
 ## -----------------------------------------------------------------------------
 
+def encode_ce(ces : list) -> list:
+    ces = ces.copy()
+    for i, ce in enumerate(ces):
+        ce = ce.copy()
+        ce['ce_symbol'] = geometryEncoder[ce['ce_symbol']]
+        ces[i] = ce
+    return ces
+
+def decode_ce(ces : list) -> list:
+    ces = ces.copy()
+    for i, ce in enumerate(ces):
+        ce = ce.copy()
+        ce['ce_symbol'] = geometryDecoder[ce['ce_symbol']]
+        ces[i] = ce
+    return ces
+
+## -----------------------------------------------------------------------------
+
 def encode_angle(angle : tuple[4]) -> tuple[4]:
     return (
         encode_element(angle[0]),
@@ -124,6 +147,8 @@ def encode_site_features(features : dict) -> dict:
     features['ion'      ] = encode_ion      (features['ion'      ])
     if 'distances' in features.keys():
         features['distances'] = encode_distances(features['distances'])
+    if 'ce' in features.keys():
+        features['ce'] = encode_ce(features['ce'])
     if 'ce_distances' in features.keys():
         features['ce_distances'] = encode_distances(features['ce_distances'])
     if 'ce_angles' in features.keys():
@@ -137,6 +162,8 @@ def decode_site_features(features : dict) -> dict:
     features['ion'      ] = decode_ion      (features['ion'      ])
     if 'distances' in features.keys():
         features['distances'] = decode_distances(features['distances'])
+    if 'ce' in features.keys():
+        features['ce'] = decode_ce(features['ce'])
     if 'ce_distances' in features.keys():
         features['ce_distances'] = decode_distances(features['ce_distances'])
     if 'ce_angles' in features.keys():
