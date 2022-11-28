@@ -70,6 +70,15 @@ Each tuple contains the three atom types along which the angle is measured. The 
 
 Note that distances and angles are computed for all neighbors by considering symmetries stemming from the periodic boundary conditions.
 
+### Encoded features
+
+Features contain several categorical variables, for instance element names type of angles between coordination environments (i.e. corner, face, etc.). These variables must be encoded such that they can be used as inputs to machine learning models. The simples approach is to replace categorical varibales by integer indices, which enables us to use embeddings for categorical variables. Also the value of oxidation states is not very well suited for machine learning models, which are positive and negative integer values. We also recode oxidation states as positive integers, such that embeddings can be used.
+
+Encoded features can be computed as follows:
+```python
+features = featurize(structure, encode = True)
+```
+
 ## References
 
 [1] Waroquiers, David, et al. "ChemEnv: a fast and robust coordination environment identification tool." Acta Crystallographica Section B: Structural Science, Crystal Engineering and Materials 76.4 (2020): 683-695.
