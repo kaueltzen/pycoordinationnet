@@ -18,6 +18,8 @@ from pymatgen.core.structure import PeriodicSite, Structure
 from pymatgen.util.coord     import get_angle
 from typing import Union
 
+from .coding import encode_site_features
+
 ## -----------------------------------------------------------------------------
 
 def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> tuple[StructureConnectivity, list[int]]:
@@ -240,7 +242,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
 
 ## -----------------------------------------------------------------------------
 
-def featurize(structure : Structure, env_strategy = 'simple') -> dict:
+def featurize(structure : Structure, env_strategy = 'simple', encode = False) -> dict:
     '''
     Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
     based on SC object, returns them as a dictionary. These features are stored for each atom,
@@ -268,5 +270,10 @@ def featurize(structure : Structure, env_strategy = 'simple') -> dict:
     structure_data : dict = compute_features_nnn(
         structure_connectivity = structure_connectivity,
         structure_data         = first_structure_data)
+
+    if encode:
+        # Loop over sites
+        for i, _ in enumerate(structure_data):
+            structure_data[i] = encode_site_features(structure_data[i])
 
     return structure_data
