@@ -113,7 +113,8 @@ def mp_icsd_query(MPID : str, experimental_data = True) -> str:
 def mp_icsd_clean(arrdata, reportBadData : bool = False) -> str:
     '''
     Filters undesired data from the stored experimental data.
-    Undesired data here include: 1- structures which cannot be converted to primitive cell. 
+    Undesired data here include:
+    1- structures which cannot be converted to primitive cell. 
     2- data the oxidation states of which cannot be analyzed. 
     3- Include any anion element which is not Oxygen. 
     4- Include Oxygen with any oxidation number other than -2.
