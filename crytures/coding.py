@@ -169,3 +169,17 @@ def decode_site_features(features : dict) -> dict:
     if 'ce_angles' in features.keys():
         features['ce_angles'] = decode_ce_angles(features['ce_angles'])
     return features
+
+## -----------------------------------------------------------------------------
+
+def encode_features(features : dict) -> dict:
+    features = features.copy()
+    for i in features:
+        features[i] = encode_site_features(features[i])
+    return features
+
+def decode_features(features : dict) -> dict:
+    features = features.copy()
+    for i in features:
+        features[i] = decode_site_features(features[i])
+    return features
