@@ -95,9 +95,9 @@ class Distances(_Distances, FeatureSequence):
         self.distances.append(distance)
     
     def get_site_features(self, site, base=None):
-        if site >= len(self.indices):
-            return None
         result = []
+        if site >= len(self.indices):
+            return result
         for i in self.indices[site]:
             if base is None:
                 r_site    = self.sites   [i]
@@ -137,9 +137,9 @@ class CoordinationEnvironments(_CoordinationEnvironments, FeatureSequence):
         self.permutations.append(permutation)
 
     def get_site_features(self, site):
-        if site >= len(self.indices):
-            return None
         result = []
+        if site >= len(self.indices):
+            return result
         for i in self.indices[site]:
             result.append({
                 'ce_symbol'   : self.ce_symbols  [i],
@@ -176,6 +176,8 @@ class Angles(_Angles, FeatureSequence):
 
     def get_site_features(self, site, base=None):
         result = []
+        if site >= len(self.indices):
+            return result
         for i in self.indices[site]:
             if base is None:
                 r_site        = self.sites        [i]
@@ -223,7 +225,7 @@ class Crytures(_Crytures):
         features['ion'         ] = self.base.ions       [site]
         features['element'     ] = self.base.elements   [site]
         features['coordinates' ] = self.base.coordinates[site]
-        if distances := self.distances.get_site_features(site, base=base) is not None:
+        if len(distances := self.distances.get_site_features(site, base=base)) > 0:
             features['distances'   ] = distances
             features['ce'          ] = self.ces         .get_site_features(site)
             features['ce_distances'] = self.ce_distances.get_site_features(site, base=base)
