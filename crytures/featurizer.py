@@ -16,9 +16,10 @@ from pymatgen.analysis.chemenv.connectivity.connectivity_finder import Connectiv
 from pymatgen.analysis.chemenv.connectivity.structure_connectivity import StructureConnectivity
 from pymatgen.core.structure import PeriodicSite, Structure
 from pymatgen.util.coord     import get_angle
-from typing import Union
+from typing import Union, NamedTuple
 
-from .coding import encode_site_features
+from .datatypes import Crytures
+from .coding    import encode_features
 
 ## -----------------------------------------------------------------------------
 
@@ -74,7 +75,7 @@ def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> t
 
 ## -----------------------------------------------------------------------------
 
-def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> dict:
+def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> Crytures:
     '''
     Calculates the desired primary features (related to the atom and nearest neighbors) based on SC object, 
     returns them as a dictionary. These features are stored for each atom, under their structure index.
@@ -90,47 +91,38 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
     Returns:
         A dictionary with first degree features
     '''
+    result = Crytures()
 
     structure = structure_connectivity.light_structure_environments.structure
     # Take lightStructureEnvironment Obj from StructureConnecivity Obj
     lse = structure_connectivity.light_structure_environments
     # Take coordination/local environments from lightStructureEnvironment Obj
     ce_list = lse.coordination_environments
-    structure_data : dict = {}
+
     for atomIndex, atom in enumerate(lse.neighbors_sets):
         
-        structure_data[atomIndex] = {}
-        structure_data[atomIndex]['oxidation'] = oxidation_list[atomIndex]
-        
         if atom == None:
-            # Save coordinates here 
-            structure_data[atomIndex]['ion'         ] = 'anion'
-            structure_data[atomIndex]['element'     ] = structure[atomIndex].species_string
-            structure_data[atomIndex]['coordinates' ] = structure[atomIndex].coords
+            result.base.add_item(atomIndex, oxidation_list[atomIndex], 'anion', structure[atomIndex].species_string, structure[atomIndex].coords)
             # Skip further featurization. We're not analyzing envs with anions
             continue
     
-        structure_data[atomIndex]['ion'        ] = 'cation'
-        structure_data[atomIndex]['element'    ] = structure[atomIndex].species_string
-        structure_data[atomIndex]['coordinates'] = structure[atomIndex].coords
-        structure_data[atomIndex]['distances'  ] = []
-        structure_data[atomIndex]['ce'         ] = ce_list[atomIndex]
+        result.base.add_item(atomIndex, oxidation_list[atomIndex], 'cation', structure[atomIndex].species_string, structure[atomIndex].coords)
+        # Save coordination environment
+        for ce in ce_list[atomIndex]:
+            result.ces.add_item(atomIndex, ce['ce_symbol'], ce['ce_fraction'], ce['csm'], ce['permutation'])
 
-        neighbors = atom[0].neighb_sites_and_indices
-        for nb in neighbors:
+        for nb in atom[0].neighb_sites_and_indices:
             # Pymatgen bug-fix (PeriodicNeighbor cannot be serialized, need to convert to PeriodicSite)
             # (fixed with 0eb1e3d72fd894b7ba39a5129fbd8b18aedf4b46)
-            site = PeriodicSite.from_dict(nb['site'].as_dict())
-            nb_element  = site.species_string
-            nb_distance = site.distance_from_point(structure[atomIndex].coords)
-            structure_data[atomIndex]['distances'].append(
-                (structure[atomIndex].species_string, nb_element, nb_distance))
+            site     = PeriodicSite.from_dict(nb['site'].as_dict())
+            distance = site.distance_from_point(structure[atomIndex].coords)
+            result.distances.add_item(atomIndex, nb['index'], distance)
     
-    return structure_data
+    return result
 
 ## -----------------------------------------------------------------------------
 
-def compute_features_nnn(structure_connectivity : StructureConnectivity, structure_data : dict) -> dict:
+def compute_features_nnn(structure_connectivity : StructureConnectivity, result : Crytures) -> Crytures:
     '''
     Calculates the desired NNN (next nearest neighbors) features based on SC object,
     and adds them to a dictionary (of primary features). These features are stored
@@ -154,28 +146,23 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
 
     # Loop over all sites in the structure
     for node in nodes:
-        distances   = []
-        node_angles = []
 
         for edge in structure_connectivity.environment_subgraph().edges(node, data=True):
 
-            # NNN distance calculation
-            distance      = structure[edge[2]['start']].distance(structure[edge[2]['end']], edge[2]['delta'])
-            start_element = structure[edge[2]['start']].species_string
-            end_element   = structure[edge[2]['end'  ]].species_string
-
-            # Can't see an order on which side edge starts
-            if node.atom_symbol != end_element:
-                neighbor_element = end_element
+            # Get site indices for which the distance is computed
+            if node.isite == edge[2]['start']:
+                site    = edge[2]['start']
+                site_to = edge[2]['end'  ]
             else:
-                # This way if the 2 elements are different, the other name is saved.
-                neighbor_element = start_element
+                site    = edge[2]['end'  ]
+                site_to = edge[2]['start']
 
-            distance = (node.atom_symbol, neighbor_element, distance)
-            # Record as distance for this edge (NNN) and for this node (atom of interest)
-            distances.append(distance)
+            # Compute distance
+            distance = structure[edge[2]['start']].distance(structure[edge[2]['end']], edge[2]['delta'])
+            # Add result
+            result.ce_distances.add_item(site, site_to, distance)
 
-            # NNN angles calculation
+            # Angles calculation
             ligands = edge[2]['ligands']
 
             # Determine the type of connectivity from the number of ligands
@@ -211,34 +198,24 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, structu
                 # Measure the angle at the ligand
                 angle = get_angle(cart_pos0 - cart_pos1, cart_pos2 - cart_pos3, units = 'degrees')
 
-                istart = ''
-                iend   = ''
-                imid   = ligand[0]
+                site        = ''
+                site_to     = ''
+                site_ligand = ligand[0]
                 if   ligand[1]['start'] == node.isite:
-                    istart = ligand[1]['start']
-                    iend   = ligand[2]['start']
+                    site    = ligand[1]['start']
+                    site_to = ligand[2]['start']
                 elif ligand[2]['start'] == node.isite:
-                    istart = ligand[2]['start']
-                    iend   = ligand[1]['start']
+                    site    = ligand[2]['start']
+                    site_to = ligand[1]['start']
                 else:
                     raise ValueError(f'Ligand is not connected to center atom')
 
                 assert ligand[0] == ligand[1]['end']
                 assert ligand[0] == ligand[2]['end']
 
-                edge_angles.append((
-                    structure[istart].species_string,
-                    structure[imid  ].species_string,
-                    structure[iend  ].species_string,
-                    angle
-                ))
-
-            node_angles.append(edge_angles)
-
-        structure_data[node.isite]['ce_distances'] = distances 
-        structure_data[node.isite]['ce_angles'   ] = node_angles
+                result.ce_angles.add_item(site, site_to, site_ligand, angle)
     
-    return structure_data
+    return result
 
 ## -----------------------------------------------------------------------------
 
@@ -262,18 +239,12 @@ def featurize(structure : Structure, env_strategy = 'simple', encode = False) ->
     '''
     structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
 
-    # Computing first degree features
-    first_structure_data : dict = compute_features_first_degree(
-        structure_connectivity = structure_connectivity,
-        oxidation_list         = oxid_states)
-    # Add NNN features
-    structure_data : dict = compute_features_nnn(
-        structure_connectivity = structure_connectivity,
-        structure_data         = first_structure_data)
+    # Computefirst degree features
+    result = compute_features_first_degree(structure_connectivity, oxid_states)
+    # Compute features between coordination environments
+    result = compute_features_nnn(structure_connectivity, result)
 
     if encode:
-        # Loop over sites
-        for i, _ in enumerate(structure_data):
-            structure_data[i] = encode_site_features(structure_data[i])
+        result = encode_features(result)
 
-    return structure_data
+    return result
