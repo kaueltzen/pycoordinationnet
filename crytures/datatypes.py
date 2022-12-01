@@ -18,11 +18,24 @@ class FeatureSequence():
         self.n = -1
 
     def add_item(self, site, indices):
-        if   site == self.n:
+        if site < self.n:
+            # Seems that we are trying to add a feature for a site
+            # that we saw a while back
+            raise ValueError(f'Invalid order of site features: Trying to add site index {site} while last index was {self.n}')
+        elif site == self.n:
             # Given site is still the same
             indices[site] = Range(indices[site][0], indices[site][1]+1)
-        elif site == self.n+1:
+        else:
             self.n += 1
+            while site > self.n:
+                if len(indices) > 0:
+                    i_start = indices[self.n-1][1]
+                    i_stop  = indices[self.n-1][1]
+                else:
+                    i_start = 0
+                    i_stop  = 0
+                indices.append(Range(i_start, i_stop))
+                self.n += 1
             # Observed a new site
             if len(indices) > 0:
                 i_start = indices[self.n-1][1]
@@ -31,9 +44,6 @@ class FeatureSequence():
                 i_start = 0
                 i_stop  = 1
             indices.append(Range(i_start, i_stop))
-        else:
-            # Seems that we missed a site
-            raise ValueError('Invalid order of site features')
 
 ## -----------------------------------------------------------------------------
 
