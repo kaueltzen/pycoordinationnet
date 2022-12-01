@@ -180,9 +180,9 @@ class Angles(_Angles, FeatureSequence):
             return result
         for i in self.indices[site]:
             if base is None:
-                r_site        = self.sites        [i]
-                r_site_to     = self.sites_to     [i]
-                r_site_ligand = self.sites_ligands[i]
+                r_site        = self.sites       [i]
+                r_site_to     = self.sites_to    [i]
+                r_site_ligand = self.sites_ligand[i]
             else:
                 r_site        = base.elements[self.sites       [i]]
                 r_site_to     = base.elements[self.sites_to    [i]]
