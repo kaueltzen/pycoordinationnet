@@ -78,7 +78,7 @@ def encode_features(features : dict, array_type = list) -> dict:
     base = base._replace(ions       = array_type(map(encode_ion      , base.ions)))
     # Convert coordination environments
     ces  = features.ces
-    ces  = ces._replace(ce_symbols = array_type(map(encode_ce_symbol , ces.ce_symbols)))
+    ces  = ces._replace(ce_symbols  = array_type(map(encode_ce_symbol, ces.ce_symbols)))
     # Create new features object
     features = features._replace(base = base)
     features = features._replace(ces  = ces)
@@ -92,7 +92,7 @@ def decode_features(features : dict, array_type = list) -> dict:
     base = base._replace(ions       = array_type(map(decode_ion      , base.ions)))
     # Convert coordination environments
     ces  = features.ces
-    ces  = ces._replace(ce_symbols = array_type(map(decode_ce_symbol , ces.ce_symbols)))
+    ces  = ces._replace(ce_symbols  = array_type(map(decode_ce_symbol, ces.ce_symbols)))
     # Create new features object
     features = features._replace(base = base)
     features = features._replace(ces  = ces)
