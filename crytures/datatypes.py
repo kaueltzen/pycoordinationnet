@@ -56,11 +56,17 @@ class _Base(NamedTuple):
 
 class Base(_Base):
     def __new__(cls, *args, **kwargs):
-        kwargs["sites"      ] = []
-        kwargs["oxidations" ] = []
-        kwargs["ions"       ] = []
-        kwargs["elements"   ] = []
-        kwargs["coordinates"] = []
+        if len(args) == 0:
+            if 'sites' not in kwargs.keys():
+                kwargs['sites'      ] = []
+            if 'oxidations' not in kwargs.keys():
+                kwargs['oxidations' ] = []
+            if 'ions' not in kwargs.keys():
+                kwargs['ions'       ] = []
+            if 'elements' not in kwargs.keys():
+                kwargs['elements'   ] = []
+            if 'coordinates' not in kwargs.keys():
+                kwargs['coordinates'] = []
         return super().__new__(cls, *args, **kwargs)
 
     def add_item(self, site, oxidation, ion, element, coordinates):
@@ -82,10 +88,15 @@ class _Distances(NamedTuple):
 
 class Distances(_Distances, FeatureSequence):
     def __new__(cls, *args, **kwargs):
-        kwargs["sites"      ] = []
-        kwargs["sites_to"   ] = []
-        kwargs["distances"  ] = []
-        kwargs["indices"    ] = []
+        if len(args) == 0:
+            if 'sites' not in kwargs.keys():
+                kwargs['sites'      ] = []
+            if 'sites_to' not in kwargs.keys():
+                kwargs['sites_to'   ] = []
+            if 'distances' not in kwargs.keys():
+                kwargs['distances'  ] = []
+            if 'indices' not in kwargs.keys():
+                kwargs['indices'    ] = []
         return super().__new__(cls, *args, **kwargs)
 
     def add_item(self, site, site_to, distance):
@@ -120,12 +131,19 @@ class _CoordinationEnvironments(NamedTuple):
 
 class CoordinationEnvironments(_CoordinationEnvironments, FeatureSequence):
     def __new__(cls, *args, **kwargs):
-        kwargs["sites"       ] = []
-        kwargs["ce_symbols"  ] = []
-        kwargs["ce_fractions"] = []
-        kwargs["csms"        ] = []
-        kwargs["permutations"] = []
-        kwargs["indices"     ] = []
+        if len(args) == 0:
+            if 'sites' not in kwargs.keys():
+                kwargs['sites'       ] = []
+            if 'ce_symbols' not in kwargs.keys():
+                kwargs['ce_symbols'  ] = []
+            if 'ce_fractions' not in kwargs.keys():
+                kwargs['ce_fractions'] = []
+            if 'csms' not in kwargs.keys():
+                kwargs['csms'        ] = []
+            if 'permutations' not in kwargs.keys():
+                kwargs['permutations'] = []
+            if 'indices' not in kwargs.keys():
+                kwargs['indices'     ] = []
         return super().__new__(cls, *args, **kwargs)
 
     def add_item(self, site, ce_symbol, ce_fraction, csm, permutation):
@@ -160,11 +178,17 @@ class _Angles(NamedTuple):
 
 class Angles(_Angles, FeatureSequence):
     def __new__(cls, *args, **kwargs):
-        kwargs["sites"       ] = []
-        kwargs["sites_to"    ] = []
-        kwargs["sites_ligand"] = []
-        kwargs["angles"      ] = []
-        kwargs["indices"     ] = []
+        if len(args) == 0:
+            if 'sites' not in kwargs.keys():
+                kwargs['sites'       ] = []
+            if 'sites_to' not in kwargs.keys():
+                kwargs['sites_to'    ] = []
+            if 'sites_ligand' not in kwargs.keys():
+                kwargs['sites_ligand'] = []
+            if 'angles' not in kwargs.keys():
+                kwargs['angles'      ] = []
+            if 'indices' not in kwargs.keys():
+                kwargs['indices'     ] = []
         return super().__new__(cls, *args, **kwargs)
 
     def add_item(self, site, site_to, site_ligand, angle):
@@ -201,11 +225,17 @@ class _Crytures(NamedTuple):
 
 class Crytures(_Crytures):
     def __new__(cls, *args, **kwargs):
-        kwargs["base"        ] = Base()
-        kwargs["distances"   ] = Distances()
-        kwargs["ces"         ] = CoordinationEnvironments()
-        kwargs["ce_distances"] = Distances()
-        kwargs["ce_angles"   ] = Angles()
+        if len(args) == 0:
+            if 'base' not in kwargs.keys():
+                kwargs['base'        ] = Base()
+            if 'distances' not in kwargs.keys():
+                kwargs['distances'   ] = Distances()
+            if 'ces' not in kwargs.keys():
+                kwargs['ces'         ] = CoordinationEnvironments()
+            if 'ce_distances' not in kwargs.keys():
+                kwargs['ce_distances'] = Distances()
+            if 'ce_angles' not in kwargs.keys():
+                kwargs['ce_angles'   ] = Angles()
         return super().__new__(cls, *args, **kwargs)
 
     def get_site_features(self, site, resolve_elements=False):
@@ -230,5 +260,5 @@ class Crytures(_Crytures):
             features['ce'          ] = self.ces         .get_site_features(site)
             features['ce_distances'] = self.ce_distances.get_site_features(site, base=base)
             features['ce_angles'   ] = self.ce_angles   .get_site_features(site, base=base)
-        
+
         return features
