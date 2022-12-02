@@ -86,7 +86,7 @@ def groundtruth_features(testData):
     # This is used to calculate and save the actual results of the tests. Not to be included in the test script.
     crysFeaturizer_dict = dict()
     for Tdatum in testData:
-        crysFeaturizer_dict[Tdatum['material_id']] = featurize(Tdatum['structure'])
+        crysFeaturizer_dict[Tdatum['material_id']] = [ site_features for site_features in featurize(Tdatum['structure']).iterate_over_sites() ]
 
     dumpfn(crysFeaturizer_dict, "test_features.json.gz")
 

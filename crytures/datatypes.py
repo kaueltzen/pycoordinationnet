@@ -267,16 +267,20 @@ class CeAngles(_CeAngles):
 ## -----------------------------------------------------------------------------
 
 class CryturesSiteIterator():
-    def __init__(self, crytures):
-        self.crytures = crytures
-        self.i        = -1
+    def __init__(self, crytures, resolve_elements):
+        self.crytures         = crytures
+        self.i                = -1
+        self.resolve_elements = resolve_elements
+    
+    def __iter__(self):
+        return self
 
     def __next__(self):
         self.i += 1
-        if self.i >= len(self.crytures):
+        if self.i >= self.crytures.num_sites:
             raise StopIteration
         else:
-            return self.crytures.get_site_features(self.i)
+            return self.crytures.get_site_features(self.i, self.resolve_elements)
 
 ## -----------------------------------------------------------------------------
 
@@ -302,11 +306,12 @@ class Crytures(_Crytures):
                 kwargs['ce_angles'   ] = CeAngles()
         return super().__new__(cls, *args, **kwargs)
 
-    def __len__(self):
+    @property
+    def num_sites(self):
         return len(self.base.oxidations)
 
-    def __iter__(self):
-        return CryturesSiteIterator(self)
+    def iterate_over_sites(self, resolve_elements=False):
+        return CryturesSiteIterator(self, resolve_elements)
 
     def get_site_features(self, site, resolve_elements=False):
         # Check site index first

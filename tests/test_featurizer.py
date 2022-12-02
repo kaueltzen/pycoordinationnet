@@ -69,8 +69,6 @@ def test_analyze_env(env_true, testData):
 @pytest.fixture
 def features_true_list():
     data = loadfn(os.path.join(root, 'test_features.json.gz'))
-    for matID in data.keys():
-        data[matID] = { int(k): v for k, v in data[matID].items() }
     return data
 
 ## -----------------------------------------------------------------------------
@@ -82,8 +80,8 @@ def test_firstDegreeFeatures(features_true_list, testData):
         structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], mystrategy = 'simple')
         features_test = compute_features_first_degree(structure_connectivity, oxid_states)
 
-        for atomIndex in features_true.keys(): 
-            features_test_site = features_test.get_site_features(atomIndex, resolve_elements=True)
+        for atomIndex, _ in enumerate(features_true):
+            features_test_site = features_test.get_site_features(atomIndex)
 
             assert(features_true[atomIndex]['oxidation'] == features_test_site['oxidation'])
             assert(features_true[atomIndex]['element'  ] == features_test_site['element'])
@@ -92,11 +90,14 @@ def test_firstDegreeFeatures(features_true_list, testData):
 
             if features_true[atomIndex]['ion'] == 'cation':
                 assert(features_true[atomIndex]['ce'] == features_test_site['ce'])
+                print('true distances:', features_true[atomIndex]['distances'])
+                print('test distances:', features_test_site['distances'])
                 for k, neighbor in enumerate(features_true[atomIndex]['distances']):
-                    # Test neighbor distance
-                    assert(pytest.approx(neighbor[1], 0.001) == features_test_site['distances'][k][1])
-                    # Test neigbor element
+                    # Test neighbor elements
                     assert(neighbor[0] == features_test_site['distances'][k][0])
+                    assert(neighbor[1] == features_test_site['distances'][k][1])
+                    # Test neighbor distance
+                    assert(pytest.approx(neighbor[2], 0.001) == features_test_site['distances'][k][2])
 
 ## -----------------------------------------------------------------------------
 
@@ -105,8 +106,8 @@ def test_nnnFeatures(features_true_list, testData):
         features_true = features_true_list[Tdatum['material_id']]
         features_test = featurize(Tdatum['structure'])
 
-        for atomIndex in features_true.keys():
-            features_test_site = features_test.get_site_features(atomIndex, resolve_elements=True)
+        for atomIndex, _ in enumerate(features_true):
+            features_test_site = features_test.get_site_features(atomIndex)
 
             # Make sure the atom order is preserved
             assert (features_true[atomIndex]['coordinates'] == features_test_site['coordinates']).all()
