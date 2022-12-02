@@ -83,18 +83,20 @@ def test_firstDegreeFeatures(features_true_list, testData):
         features_test = compute_features_first_degree(structure_connectivity, oxid_states)
 
         for atomIndex in features_true.keys(): 
-            assert(features_true[atomIndex]['oxidation'] == features_test[atomIndex]['oxidation'])
-            assert(features_true[atomIndex]['element'  ] == features_test[atomIndex]['element'])
-            np.testing.assert_allclose(features_true[atomIndex]['coordinates'], features_test[atomIndex]['coordinates'])
-            assert(features_true[atomIndex]['ion'] == features_test[atomIndex]['ion'])
+            features_test_site = features_test.get_site_features(atomIndex, resolve_elements=True)
+
+            assert(features_true[atomIndex]['oxidation'] == features_test_site['oxidation'])
+            assert(features_true[atomIndex]['element'  ] == features_test_site['element'])
+            np.testing.assert_allclose(features_true[atomIndex]['coordinates'], features_test_site['coordinates'])
+            assert(features_true[atomIndex]['ion'] == features_test_site['ion'])
 
             if features_true[atomIndex]['ion'] == 'cation':
-                assert(features_true[atomIndex]['ce'] == features_test[atomIndex]['ce'])
+                assert(features_true[atomIndex]['ce'] == features_test_site['ce'])
                 for k, neighbor in enumerate(features_true[atomIndex]['distances']):
                     # Test neighbor distance
-                    assert(pytest.approx(neighbor[1], 0.001) == features_test[atomIndex]['distances'][k][1])
+                    assert(pytest.approx(neighbor[1], 0.001) == features_test_site['distances'][k][1])
                     # Test neigbor element
-                    assert(neighbor[0] == features_test[atomIndex]['distances'][k][0])
+                    assert(neighbor[0] == features_test_site['distances'][k][0])
 
 ## -----------------------------------------------------------------------------
 
@@ -104,9 +106,10 @@ def test_nnnFeatures(features_true_list, testData):
         features_test = featurize(Tdatum['structure'])
 
         for atomIndex in features_true.keys():
+            features_test_site = features_test.get_site_features(atomIndex, resolve_elements=True)
 
             # Make sure the atom order is preserved
-            assert (features_true[atomIndex]['coordinates'] == features_test[atomIndex]['coordinates']).all()
+            assert (features_true[atomIndex]['coordinates'] == features_test_site['coordinates']).all()
 
             if features_true[atomIndex]['ion'] == 'cation':
                 # The order of distances may vary
@@ -117,10 +120,10 @@ def test_nnnFeatures(features_true_list, testData):
                 for p, nnn in enumerate(features_true[atomIndex]['ce_distances']):
                     # Extract NNN distance
                     distances_true.append(round(nnn[2], 3))
-                    distances_test.append(round(features_test[atomIndex]['ce_distances'][p][2], 3))
+                    distances_test.append(round(features_test_site['ce_distances'][p][2], 3))
                     # Extract NNN element
                     elements_true.append(nnn[1])
-                    elements_test.append(features_test[atomIndex]['ce_distances'][p][1])
+                    elements_test.append(features_test_site['ce_distances'][p][1])
 
                 assert(np.all(np.sort(distances_true) == np.sort(distances_test)))
                 assert(np.all(np.sort( elements_true) == np.sort( elements_test)))
@@ -141,7 +144,7 @@ def test_nnnFeatures(features_true_list, testData):
                         # Extract elements
                         elements_true.append(connectivity[connectivityIndex][2])
 
-                for connectivity in features_test[atomIndex]['ce_angles']:
+                for connectivity in features_test_site['ce_angles']:
                     # Check connectivity type (cornder/edge/face/noConnection)
                     types_test.append(connectivity[0])
 
