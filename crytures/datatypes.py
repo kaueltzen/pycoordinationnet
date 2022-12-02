@@ -170,33 +170,33 @@ class CoordinationEnvironments(_CoordinationEnvironments, FeatureSequence):
 ## -----------------------------------------------------------------------------
 
 class _Angles(NamedTuple):
-    sites        : list 
-    sites_to     : list 
-    sites_ligand : list 
-    angles       : list 
-    indices      : list 
+    sites     : list 
+    sites_to  : list 
+    ligands   : list 
+    angles    : list 
+    indices   : list 
 
 class Angles(_Angles, FeatureSequence):
     def __new__(cls, *args, **kwargs):
         if len(args) == 0:
             if 'sites' not in kwargs.keys():
-                kwargs['sites'       ] = []
+                kwargs['sites'    ] = []
             if 'sites_to' not in kwargs.keys():
-                kwargs['sites_to'    ] = []
-            if 'sites_ligand' not in kwargs.keys():
-                kwargs['sites_ligand'] = []
+                kwargs['sites_to' ] = []
+            if 'ligands' not in kwargs.keys():
+                kwargs['ligands'] = []
             if 'angles' not in kwargs.keys():
-                kwargs['angles'      ] = []
+                kwargs['angles'   ] = []
             if 'indices' not in kwargs.keys():
-                kwargs['indices'     ] = []
+                kwargs['indices'  ] = []
         return super().__new__(cls, *args, **kwargs)
 
-    def add_item(self, site, site_to, site_ligand, angle):
+    def add_item(self, site, site_to, ligands, angles):
         super().add_item(site, self.indices)
-        self.sites       .append(site)
-        self.sites_to    .append(site_to)
-        self.sites_ligand.append(site_ligand)
-        self.angles      .append(angle)
+        self.sites    .append(site)
+        self.sites_to .append(site_to)
+        self.ligands  .append(ligands)
+        self.angles   .append(angles)
 
     def get_site_features(self, site, base=None):
         result = []
@@ -204,14 +204,64 @@ class Angles(_Angles, FeatureSequence):
             return result
         for i in self.indices[site]:
             if base is None:
-                r_site        = self.sites       [i]
-                r_site_to     = self.sites_to    [i]
-                r_site_ligand = self.sites_ligand[i]
+                r_site    = self.sites   [i]
+                r_site_to = self.sites_to[i]
+                ligands   = self.ligands [i]
             else:
-                r_site        = base.elements[self.sites       [i]]
-                r_site_to     = base.elements[self.sites_to    [i]]
-                r_site_ligand = base.elements[self.sites_ligand[i]]
-            result.append([r_site, r_site_ligand, r_site_to, self.angles[i]])
+                r_site    = base.elements[self.sites   [i]]
+                r_site_to = base.elements[self.sites_to[i]]
+                ligands   = [ base.elements[ligand] for ligand in self.ligands[i] ]
+            result.append([r_site, r_site_to, ligands, self.angles[i]])
+        return result
+
+## -----------------------------------------------------------------------------
+
+class _CeAngles(NamedTuple):
+    isolated     : Angles
+    corner       : Angles
+    edge         : Angles
+    face         : Angles
+
+class CeAngles(_CeAngles):
+    def __new__(cls, *args, **kwargs):
+        if len(args) == 0:
+            if 'isolated' not in kwargs.keys():
+                kwargs['isolated'] = Angles()
+            if 'corner' not in kwargs.keys():
+                kwargs['corner'  ] = Angles()
+            if 'edge' not in kwargs.keys():
+                kwargs['edge'    ] = Angles()
+            if 'face' not in kwargs.keys():
+                kwargs['face'    ] = Angles()
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def add_item(self, type, site, site_to, ligands, angles):
+        if   type == 'isolated':
+            self.isolated.add_item(site, site_to, ligands, angles)
+        elif type == 'corner':
+            self.corner  .add_item(site, site_to, ligands, angles)
+        elif type == 'edge':
+            self.edge    .add_item(site, site_to, ligands, angles)
+        elif type == 'face':
+            self.face    .add_item(site, site_to, ligands, angles)
+        else:
+            raise ValueError(f'Invalid angle type: {type}')
+
+    def get_site_features(self, site, base=None):
+        result = []
+        for feature in self.isolated.get_site_features(site, base=base):
+            result.append(
+                ['isolated'] + [ [feature[0], ligand, feature[1], angle] for ligand, angle in zip(feature[2], feature[3]) ])
+        for feature in self.corner  .get_site_features(site, base=base):
+            result.append(
+                ['corner'  ] + [ [feature[0], ligand, feature[1], angle] for ligand, angle in zip(feature[2], feature[3]) ])
+        for feature in self.edge    .get_site_features(site, base=base):
+            result.append(
+                ['edge'    ] + [ [feature[0], ligand, feature[1], angle] for ligand, angle in zip(feature[2], feature[3]) ])
+        for feature in self.face    .get_site_features(site, base=base):
+            result.append(
+                ['face'    ] + [ [feature[0], ligand, feature[1], angle] for ligand, angle in zip(feature[2], feature[3]) ])
         return result
 
 ## -----------------------------------------------------------------------------
@@ -221,7 +271,7 @@ class _Crytures(NamedTuple):
     distances        : Distances
     ces              : CoordinationEnvironments
     ce_distances     : Distances
-    ce_angles        : Angles
+    ce_angles        : CeAngles
 
 class Crytures(_Crytures):
     def __new__(cls, *args, **kwargs):
@@ -235,7 +285,7 @@ class Crytures(_Crytures):
             if 'ce_distances' not in kwargs.keys():
                 kwargs['ce_distances'] = Distances()
             if 'ce_angles' not in kwargs.keys():
-                kwargs['ce_angles'   ] = Angles()
+                kwargs['ce_angles'   ] = CeAngles()
         return super().__new__(cls, *args, **kwargs)
 
     def get_site_features(self, site, resolve_elements=False):

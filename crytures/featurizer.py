@@ -175,8 +175,8 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
             else:
                 connectivity = 'face'
 
-            edge_angles : list[Union[list, dict]] = []
-            edge_angles.append(connectivity)
+            angles = []
+            ligand_indices = []
             # For each ligand compute the angle to another coordination environment (central atom)
             for ligand in ligands:
                 # The ligand item contains a path one central atom (cation) to another central atom
@@ -198,22 +198,22 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
                 # Measure the angle at the ligand
                 angle = get_angle(cart_pos0 - cart_pos1, cart_pos2 - cart_pos3, units = 'degrees')
 
-                site        = ''
-                site_to     = ''
-                site_ligand = ligand[0]
                 if   ligand[1]['start'] == node.isite:
-                    site    = ligand[1]['start']
-                    site_to = ligand[2]['start']
+                    assert site    == ligand[1]['start']
+                    assert site_to == ligand[2]['start']
                 elif ligand[2]['start'] == node.isite:
-                    site    = ligand[2]['start']
-                    site_to = ligand[1]['start']
+                    assert site    == ligand[2]['start']
+                    assert site_to == ligand[1]['start']
                 else:
                     raise ValueError(f'Ligand is not connected to center atom')
 
                 assert ligand[0] == ligand[1]['end']
                 assert ligand[0] == ligand[2]['end']
 
-                result.ce_angles.add_item(site, site_to, site_ligand, angle)
+                angles.append(angle)
+                ligand_indices.append(ligand[0])
+
+            result.ce_angles.add_item(connectivity, site, site_to, ligand_indices, angles)
     
     return result
 
