@@ -1,11 +1,38 @@
 
-from typing import NamedTuple
+from monty.json import MSONable
+from monty.serialization import dumpfn, loadfn
 
 ## -----------------------------------------------------------------------------
 
-class Range(NamedTuple):
+class MyMSONable(MSONable):
+    def dump(self, filename):
+        return dumpfn(self.as_dict(), filename)
+    @classmethod
+    def load(self, filename):
+        return loadfn(filename)
+
+## -----------------------------------------------------------------------------
+
+class FancyString():
+    def __str__(self):
+        s = f'{self.__class__.__name__}('
+        for i, (key, value) in enumerate(self.__dict__.items()):
+            if i == 0:
+                s += f'{key}={str(value)}'
+            else:
+                s += f', {key}={str(value)}'
+        return s + ')'
+    def __repr__(self):
+        return str(self)
+
+## -----------------------------------------------------------------------------
+
+class Range(FancyString, MyMSONable):
     start : int
     stop  : int
+    def __init__(self, start, stop):
+        self.start = start
+        self.stop  = stop
     def __iter__(self):
         return iter(range(self.start, self.stop))
 
@@ -47,27 +74,19 @@ class FeatureSequence():
 
 ## -----------------------------------------------------------------------------
 
-class _Base(NamedTuple):
+class Base(FancyString, MyMSONable):
     sites       : list
     oxidations  : list
     ions        : list
     elements    : list
     coordinates : list
 
-class Base(_Base):
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 0:
-            if 'sites' not in kwargs.keys():
-                kwargs['sites'      ] = []
-            if 'oxidations' not in kwargs.keys():
-                kwargs['oxidations' ] = []
-            if 'ions' not in kwargs.keys():
-                kwargs['ions'       ] = []
-            if 'elements' not in kwargs.keys():
-                kwargs['elements'   ] = []
-            if 'coordinates' not in kwargs.keys():
-                kwargs['coordinates'] = []
-        return super().__new__(cls, *args, **kwargs)
+    def __init__(self, sites = [], oxidations = [], ions = [], elements = [], coordinates = []):
+        self.sites       = sites
+        self.oxidations  = oxidations
+        self.ions        = ions
+        self.elements    = elements
+        self.coordinates = coordinates
 
     def add_item(self, site, oxidation, ion, element, coordinates):
         if site != len(self.sites):
@@ -80,27 +99,19 @@ class Base(_Base):
 
 ## -----------------------------------------------------------------------------
 
-class _Distances(NamedTuple):
+class Distances(FeatureSequence, FancyString, MyMSONable):
     sites       : list
     sites_to    : list
     distances   : list
     indices     : list
 
-class Distances(_Distances, FeatureSequence):
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 0:
-            if 'sites' not in kwargs.keys():
-                kwargs['sites'      ] = []
-            if 'sites_to' not in kwargs.keys():
-                kwargs['sites_to'   ] = []
-            if 'distances' not in kwargs.keys():
-                kwargs['distances'  ] = []
-            if 'indices' not in kwargs.keys():
-                kwargs['indices'    ] = []
-        return super().__new__(cls, *args, **kwargs)
+    def __init__(self, sites = [], sites_to = [], distances = [], indices = []):
+        self.sites     = sites
+        self.sites_to  = sites_to
+        self.distances = distances
+        self.indices   = indices
 
     def add_item(self, site, site_to, distance):
-        super().add_item(site, self.indices)
         self.sites    .append(site)
         self.sites_to .append(site_to)
         self.distances.append(distance)
@@ -121,7 +132,8 @@ class Distances(_Distances, FeatureSequence):
 
 ## -----------------------------------------------------------------------------
 
-class _CoordinationEnvironments(NamedTuple):
+
+class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
     sites        : list
     ce_symbols   : list
     ce_fractions : list
@@ -129,25 +141,15 @@ class _CoordinationEnvironments(NamedTuple):
     permutations : list
     indices      : list
 
-class CoordinationEnvironments(_CoordinationEnvironments, FeatureSequence):
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 0:
-            if 'sites' not in kwargs.keys():
-                kwargs['sites'       ] = []
-            if 'ce_symbols' not in kwargs.keys():
-                kwargs['ce_symbols'  ] = []
-            if 'ce_fractions' not in kwargs.keys():
-                kwargs['ce_fractions'] = []
-            if 'csms' not in kwargs.keys():
-                kwargs['csms'        ] = []
-            if 'permutations' not in kwargs.keys():
-                kwargs['permutations'] = []
-            if 'indices' not in kwargs.keys():
-                kwargs['indices'     ] = []
-        return super().__new__(cls, *args, **kwargs)
+    def __init__(self, sites = [], ce_symbols = [], ce_fractions = [], csms = [], permutations = [], indices = []):
+        self.sites        = sites
+        self.ce_symbols   = ce_symbols
+        self.ce_fractions = ce_fractions
+        self.csms         = csms
+        self.permutations = permutations
+        self.indices      = indices
 
     def add_item(self, site, ce_symbol, ce_fraction, csm, permutation):
-        super().add_item(site, self.indices)
         self.sites       .append(site)
         self.ce_symbols  .append(ce_symbol)
         self.ce_fractions.append(ce_fraction)
@@ -169,30 +171,21 @@ class CoordinationEnvironments(_CoordinationEnvironments, FeatureSequence):
 
 ## -----------------------------------------------------------------------------
 
-class _Angles(NamedTuple):
+class Angles(FeatureSequence, FancyString, MyMSONable):
     sites     : list 
     sites_to  : list 
     ligands   : list 
     angles    : list 
     indices   : list 
 
-class Angles(_Angles, FeatureSequence):
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 0:
-            if 'sites' not in kwargs.keys():
-                kwargs['sites'    ] = []
-            if 'sites_to' not in kwargs.keys():
-                kwargs['sites_to' ] = []
-            if 'ligands' not in kwargs.keys():
-                kwargs['ligands'] = []
-            if 'angles' not in kwargs.keys():
-                kwargs['angles'   ] = []
-            if 'indices' not in kwargs.keys():
-                kwargs['indices'  ] = []
-        return super().__new__(cls, *args, **kwargs)
+    def __init__(self, sites = [], sites_to = [], ligands = [], angles = [], indices = []):
+        self.sites    = sites
+        self.sites_to = sites_to
+        self.ligands  = ligands
+        self.angles   = angles
+        self.indices  = indices
 
     def add_item(self, site, site_to, ligands, angles):
-        super().add_item(site, self.indices)
         self.sites    .append(site)
         self.sites_to .append(site_to)
         self.ligands  .append(ligands)
@@ -216,25 +209,17 @@ class Angles(_Angles, FeatureSequence):
 
 ## -----------------------------------------------------------------------------
 
-class _CeAngles(NamedTuple):
+class CeAngles(FancyString, MyMSONable):
     isolated     : Angles
     corner       : Angles
     edge         : Angles
     face         : Angles
 
-class CeAngles(_CeAngles):
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 0:
-            if 'isolated' not in kwargs.keys():
-                kwargs['isolated'] = Angles()
-            if 'corner' not in kwargs.keys():
-                kwargs['corner'  ] = Angles()
-            if 'edge' not in kwargs.keys():
-                kwargs['edge'    ] = Angles()
-            if 'face' not in kwargs.keys():
-                kwargs['face'    ] = Angles()
-
-        return super().__new__(cls, *args, **kwargs)
+    def __init__(self, isolated = Angles(), corner = Angles(), edge = Angles(), face = Angles()) -> None:
+        self.isolated = isolated
+        self.corner   = corner
+        self.edge     = edge
+        self.face     = face
 
     def add_item(self, type, site, site_to, ligands, angles):
         if   type == 'isolated':
@@ -284,27 +269,19 @@ class CryturesSiteIterator():
 
 ## -----------------------------------------------------------------------------
 
-class _Crytures(NamedTuple):
+class Crytures(FancyString, MyMSONable):
     base             : Base
     distances        : Distances
     ces              : CoordinationEnvironments
     ce_distances     : Distances
     ce_angles        : CeAngles
 
-class Crytures(_Crytures):
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 0:
-            if 'base' not in kwargs.keys():
-                kwargs['base'        ] = Base()
-            if 'distances' not in kwargs.keys():
-                kwargs['distances'   ] = Distances()
-            if 'ces' not in kwargs.keys():
-                kwargs['ces'         ] = CoordinationEnvironments()
-            if 'ce_distances' not in kwargs.keys():
-                kwargs['ce_distances'] = Distances()
-            if 'ce_angles' not in kwargs.keys():
-                kwargs['ce_angles'   ] = CeAngles()
-        return super().__new__(cls, *args, **kwargs)
+    def __init__(self, base = Base(), distances = Distances(), ces = CoordinationEnvironments(), ce_distances = Distances(), ce_angles = CeAngles()) -> None:
+        self.base         = base
+        self.distances    = distances
+        self.ces          = ces
+        self.ce_distances = ce_distances
+        self.ce_angles    = ce_angles
 
     @property
     def num_sites(self):
