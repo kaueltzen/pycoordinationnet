@@ -6,7 +6,7 @@ from monty.serialization import dumpfn, loadfn
 
 class MyMSONable(MSONable):
 
-    def dump(self, filename):
+    def dump(self, filename) -> None:
         return dumpfn(self.as_dict(), filename)
 
     @classmethod
@@ -17,7 +17,7 @@ class MyMSONable(MSONable):
 
 class FancyString():
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = f'{self.__class__.__name__}('
         for i, (key, value) in enumerate(self.__dict__.items()):
             if i == 0:
@@ -26,14 +26,14 @@ class FancyString():
                 s += f', {key}={str(value)}'
         return s + ')'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 ## -----------------------------------------------------------------------------
 
 class Range(FancyString, MyMSONable):
 
-    def __init__(self, start, stop):
+    def __init__(self, start, stop) -> None:
         self.start = start
         self.stop  = stop
 
@@ -44,10 +44,10 @@ class Range(FancyString, MyMSONable):
 
 class FeatureSequence():
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.n = -1
 
-    def add_item(self, site, indices):
+    def add_item(self, site, indices) -> None:
         if site < self.n:
             # Seems that we are trying to add a feature for a site
             # that we saw a while back
@@ -79,14 +79,14 @@ class FeatureSequence():
 
 class Base(FancyString, MyMSONable):
 
-    def __init__(self, sites = [], oxidations = [], ions = [], elements = [], coordinates = []):
+    def __init__(self, sites = None, oxidations = None, ions = None, elements = None, coordinates = None) -> None:
         self.sites       = sites       if sites       else []
         self.oxidations  = oxidations  if oxidations  else []
         self.ions        = ions        if ions        else []
         self.elements    = elements    if elements    else []
         self.coordinates = coordinates if coordinates else []
 
-    def add_item(self, site, oxidation, ion, element, coordinates):
+    def add_item(self, site, oxidation, ion, element, coordinates) -> None:
         if site != len(self.sites):
             raise ValueError(f'Invalid order of site features: isite={site}, isites={self.sites}')
         self.sites      .append(site)
@@ -99,18 +99,18 @@ class Base(FancyString, MyMSONable):
 
 class Distances(FeatureSequence, FancyString, MyMSONable):
 
-    def __init__(self, sites = None, sites_to = None, distances = None, indices = None):
+    def __init__(self, sites = None, sites_to = None, distances = None, indices = None) -> None:
         self.sites     = sites     if sites     else []
         self.sites_to  = sites_to  if sites_to  else []
         self.distances = distances if distances else []
         self.indices   = indices   if indices   else []
 
-    def add_item(self, site, site_to, distance):
+    def add_item(self, site, site_to, distance) -> None:
         self.sites    .append(site)
         self.sites_to .append(site_to)
         self.distances.append(distance)
     
-    def get_site_features(self, site, base=None):
+    def get_site_features(self, site, base=None) -> list:
         result = []
         if site >= len(self.indices):
             return result
@@ -129,7 +129,7 @@ class Distances(FeatureSequence, FancyString, MyMSONable):
 
 class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
 
-    def __init__(self, sites = None, ce_symbols = None, ce_fractions = None, csms = None, permutations = None, indices = None):
+    def __init__(self, sites = None, ce_symbols = None, ce_fractions = None, csms = None, permutations = None, indices = None) -> None:
         self.sites        = sites        if sites        else []
         self.ce_symbols   = ce_symbols   if ce_symbols   else []
         self.ce_fractions = ce_fractions if ce_fractions else []
@@ -137,14 +137,14 @@ class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
         self.permutations = permutations if permutations else []
         self.indices      = indices      if indices      else []
 
-    def add_item(self, site, ce_symbol, ce_fraction, csm, permutation):
+    def add_item(self, site, ce_symbol, ce_fraction, csm, permutation) -> None:
         self.sites       .append(site)
         self.ce_symbols  .append(ce_symbol)
         self.ce_fractions.append(ce_fraction)
         self.csms        .append(csm)
         self.permutations.append(permutation)
 
-    def get_site_features(self, site):
+    def get_site_features(self, site) -> list:
         result = []
         if site >= len(self.indices):
             return result
@@ -161,20 +161,20 @@ class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
 
 class Angles(FeatureSequence, FancyString, MyMSONable):
 
-    def __init__(self, sites = [], sites_to = [], ligands = [], angles = [], indices = []):
+    def __init__(self, sites = None, sites_to = None, ligands = None, angles = None, indices = None) -> None:
         self.sites    = sites    if sites    else []
         self.sites_to = sites_to if sites_to else []
         self.ligands  = ligands  if ligands  else []
         self.angles   = angles   if angles   else []
         self.indices  = indices  if indices  else []
 
-    def add_item(self, site, site_to, ligands, angles):
+    def add_item(self, site, site_to, ligands, angles) -> None:
         self.sites    .append(site)
         self.sites_to .append(site_to)
         self.ligands  .append(ligands)
         self.angles   .append(angles)
 
-    def get_site_features(self, site, base=None):
+    def get_site_features(self, site, base=None) -> list:
         result = []
         if site >= len(self.indices):
             return result
@@ -200,7 +200,7 @@ class CeAngles(FancyString, MyMSONable):
         self.edge     = edge     if edge     else Angles()
         self.face     = face     if face     else Angles()
 
-    def add_item(self, type, site, site_to, ligands, angles):
+    def add_item(self, type, site, site_to, ligands, angles) -> None:
         if   type == 'isolated':
             self.isolated.add_item(site, site_to, ligands, angles)
         elif type == 'corner':
@@ -212,7 +212,7 @@ class CeAngles(FancyString, MyMSONable):
         else:
             raise ValueError(f'Invalid angle type: {type}')
 
-    def get_site_features(self, site, base=None):
+    def get_site_features(self, site, base=None) -> list:
         result = []
         for feature in self.isolated.get_site_features(site, base=base):
             result.append(
@@ -232,7 +232,7 @@ class CeAngles(FancyString, MyMSONable):
 
 class CryturesSiteIterator():
 
-    def __init__(self, crytures, resolve_elements):
+    def __init__(self, crytures, resolve_elements) -> None:
         self.crytures         = crytures
         self.i                = -1
         self.resolve_elements = resolve_elements
@@ -259,13 +259,13 @@ class Crytures(FancyString, MyMSONable):
         self.ce_angles    = ce_angles    if ce_angles    else CeAngles()
 
     @property
-    def num_sites(self):
+    def num_sites(self) -> int:
         return len(self.base.oxidations)
 
-    def iterate_over_sites(self, resolve_elements=False):
+    def iterate_over_sites(self, resolve_elements = False):
         return CryturesSiteIterator(self, resolve_elements)
 
-    def get_site_features(self, site, resolve_elements=False):
+    def get_site_features(self, site, resolve_elements = False) -> str:
         # Check site index first
         if site < 0 or site >= len(self.base.oxidations):
             raise ValueError('Invalid site index given')

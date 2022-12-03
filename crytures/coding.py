@@ -1,4 +1,4 @@
-
+from copy import copy
 from enum import Enum
 
 from pymatgen.core.periodic_table import Element
@@ -71,29 +71,25 @@ def decode_ce_symbol(sym : str) -> int:
 ## -----------------------------------------------------------------------------
 
 def encode_features(features : dict, array_type = list) -> dict:
+    features      = copy(features)
+    features.base = copy(features.base)
+    features.ces  = copy(features.ces)
     # Convert base
-    base = features.base
-    base = base._replace(oxidations = array_type(map(encode_oxidation, base.oxidations)))
-    base = base._replace(elements   = array_type(map(encode_element  , base.elements)))
-    base = base._replace(ions       = array_type(map(encode_ion      , base.ions)))
+    features.base.oxidations = array_type(map(encode_oxidation, features.base.oxidations))
+    features.base.elements   = array_type(map(encode_element  , features.base.elements))
+    features.base.ions       = array_type(map(encode_ion      , features.base.ions))
     # Convert coordination environments
-    ces  = features.ces
-    ces  = ces._replace(ce_symbols  = array_type(map(encode_ce_symbol, ces.ce_symbols)))
-    # Create new features object
-    features = features._replace(base = base)
-    features = features._replace(ces  = ces)
+    features.ces.ce_symbols  = array_type(map(encode_ce_symbol, features.ces.ce_symbols))
     return features
 
 def decode_features(features : dict, array_type = list) -> dict:
+    features      = copy(features)
+    features.base = copy(features.base)
+    features.ces  = copy(features.ces)
     # Convert base
-    base = features.base
-    base = base._replace(oxidations = array_type(map(decode_oxidation, base.oxidations)))
-    base = base._replace(elements   = array_type(map(decode_element  , base.elements)))
-    base = base._replace(ions       = array_type(map(decode_ion      , base.ions)))
+    features.base.oxidations = array_type(map(decode_oxidation, features.base.oxidations))
+    features.base.elements   = array_type(map(decode_element  , features.base.elements))
+    features.base.ions       = array_type(map(decode_ion      , features.base.ions))
     # Convert coordination environments
-    ces  = features.ces
-    ces  = ces._replace(ce_symbols  = array_type(map(decode_ce_symbol, ces.ce_symbols)))
-    # Create new features object
-    features = features._replace(base = base)
-    features = features._replace(ces  = ces)
+    features.ces.ce_symbols  = array_type(map(decode_ce_symbol, features.ces.ce_symbols))
     return features
