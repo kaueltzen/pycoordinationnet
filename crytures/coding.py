@@ -70,7 +70,7 @@ def decode_ce_symbol(sym : str) -> int:
 
 ## -----------------------------------------------------------------------------
 
-def encode_features(features : dict, array_type = list) -> dict:
+def encode_features(features : 'Crytures', array_type = list) -> 'Crytures':
     features      = copy(features)
     features.base = copy(features.base)
     features.ces  = copy(features.ces)
@@ -82,7 +82,7 @@ def encode_features(features : dict, array_type = list) -> dict:
     features.ces.ce_symbols  = array_type(map(encode_ce_symbol, features.ces.ce_symbols))
     return features
 
-def decode_features(features : dict, array_type = list) -> dict:
+def decode_features(features : 'Crytures', array_type = list) -> 'Crytures':
     features      = copy(features)
     features.base = copy(features.base)
     features.ces  = copy(features.ces)

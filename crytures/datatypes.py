@@ -1,6 +1,10 @@
 
 from monty.json import MSONable
 from monty.serialization import dumpfn, loadfn
+from pymatgen.core.structure import Structure
+
+from .coding     import encode_features, decode_features
+from .featurizer import analyze_environment, compute_features_first_degree, compute_features_nnn
 
 ## -----------------------------------------------------------------------------
 
@@ -54,13 +58,13 @@ class FeatureSequence():
             raise ValueError(f'Invalid order of site features: Trying to add site index {site} while last index was {self.n}')
         elif site == self.n:
             # Given site is still the same
-            indices[site] = Range(indices[site][0], indices[site][1]+1)
+            indices[site].stop += 1
         else:
             self.n += 1
             while site > self.n:
                 if len(indices) > 0:
-                    i_start = indices[self.n-1][1]
-                    i_stop  = indices[self.n-1][1]
+                    i_start = indices[self.n-1].stop
+                    i_stop  = indices[self.n-1].stop
                 else:
                     i_start = 0
                     i_stop  = 0
@@ -68,8 +72,8 @@ class FeatureSequence():
                 self.n += 1
             # Observed a new site
             if len(indices) > 0:
-                i_start = indices[self.n-1][1]
-                i_stop  = indices[self.n-1][1]+1
+                i_start = indices[self.n-1].stop
+                i_stop  = indices[self.n-1].stop+1
             else:
                 i_start = 0
                 i_stop  = 1
@@ -80,6 +84,7 @@ class FeatureSequence():
 class Base(FancyString, MyMSONable):
 
     def __init__(self, sites = None, oxidations = None, ions = None, elements = None, coordinates = None) -> None:
+        super().__init__()
         self.sites       = sites       if sites       else []
         self.oxidations  = oxidations  if oxidations  else []
         self.ions        = ions        if ions        else []
@@ -100,12 +105,14 @@ class Base(FancyString, MyMSONable):
 class Distances(FeatureSequence, FancyString, MyMSONable):
 
     def __init__(self, sites = None, sites_to = None, distances = None, indices = None) -> None:
+        super().__init__()
         self.sites     = sites     if sites     else []
         self.sites_to  = sites_to  if sites_to  else []
         self.distances = distances if distances else []
         self.indices   = indices   if indices   else []
 
     def add_item(self, site, site_to, distance) -> None:
+        super().add_item(site, self.indices)
         self.sites    .append(site)
         self.sites_to .append(site_to)
         self.distances.append(distance)
@@ -130,6 +137,7 @@ class Distances(FeatureSequence, FancyString, MyMSONable):
 class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
 
     def __init__(self, sites = None, ce_symbols = None, ce_fractions = None, csms = None, permutations = None, indices = None) -> None:
+        super().__init__()
         self.sites        = sites        if sites        else []
         self.ce_symbols   = ce_symbols   if ce_symbols   else []
         self.ce_fractions = ce_fractions if ce_fractions else []
@@ -138,6 +146,7 @@ class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
         self.indices      = indices      if indices      else []
 
     def add_item(self, site, ce_symbol, ce_fraction, csm, permutation) -> None:
+        super().add_item(site, self.indices)
         self.sites       .append(site)
         self.ce_symbols  .append(ce_symbol)
         self.ce_fractions.append(ce_fraction)
@@ -162,6 +171,7 @@ class CoordinationEnvironments(FeatureSequence, FancyString, MyMSONable):
 class Angles(FeatureSequence, FancyString, MyMSONable):
 
     def __init__(self, sites = None, sites_to = None, ligands = None, angles = None, indices = None) -> None:
+        super().__init__()
         self.sites    = sites    if sites    else []
         self.sites_to = sites_to if sites_to else []
         self.ligands  = ligands  if ligands  else []
@@ -169,6 +179,7 @@ class Angles(FeatureSequence, FancyString, MyMSONable):
         self.indices  = indices  if indices  else []
 
     def add_item(self, site, site_to, ligands, angles) -> None:
+        super().add_item(site, self.indices)
         self.sites    .append(site)
         self.sites_to .append(site_to)
         self.ligands  .append(ligands)
@@ -195,6 +206,7 @@ class Angles(FeatureSequence, FancyString, MyMSONable):
 class CeAngles(FancyString, MyMSONable):
 
     def __init__(self, isolated = None, corner = None, edge = None, face = None) -> None:
+        super().__init__()
         self.isolated = isolated if isolated else Angles()
         self.corner   = corner   if corner   else Angles()
         self.edge     = edge     if edge     else Angles()
@@ -251,12 +263,65 @@ class CryturesSiteIterator():
 
 class Crytures(FancyString, MyMSONable):
 
-    def __init__(self, base = None, distances = None, ces = None, ce_distances = None, ce_angles = None) -> None:
+    def __init__(self, base = None, distances = None, ces = None, ce_distances = None, ce_angles = None, encoded = False) -> None:
+        super().__init__()
         self.base         = base         if base         else Base()
         self.distances    = distances    if distances    else Distances()
         self.ces          = ces          if ces          else CoordinationEnvironments()
         self.ce_distances = ce_distances if ce_distances else Distances()
         self.ce_angles    = ce_angles    if ce_angles    else CeAngles()
+        self._encoded     = encoded
+
+    @classmethod
+    def from_structure(cls, structure : Structure, env_strategy = 'simple', encode = False) -> dict:
+        '''
+        Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
+        based on SC object, returns them as a dictionary. These features are stored for each atom,
+        under their structure index.
+        Features Include: Oxidation number, type of ion, element, coordination for all atoms.
+        Cation specific features are the local(coordination) env, nearest neighbor elements & distances, 
+        polhedral neighbor elements, distances, connectivity angles & types. 
+
+        Args:
+            structure (Structure):
+                A pymatgen structure object
+            env_strategy (string):
+                The strategy used for computing environments
+        
+        Returns:
+            A dictionary of features for each atom in the structure
+        '''
+        result = Crytures()
+
+        structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
+
+        # Computefirst degree features
+        result = compute_features_first_degree(structure_connectivity, oxid_states, result)
+        # Compute features between coordination environments
+        result = compute_features_nnn(structure_connectivity, result)
+
+        if encode:
+            result = encode_features(result)
+
+        return result
+
+    def encode(self) -> 'Crytures':
+        if self._encoded:
+            raise ValueError('Features are already encoded')
+        crytures = encode_features(self)
+        crytures._encoded = True
+        return crytures
+
+    def decode(self) -> 'Crytures':
+        if not self._encoded:
+            raise ValueError('Features are already decoded')
+        crytures = decode_features(self)
+        crytures._encoded = False
+        return crytures
+
+    @property
+    def encoded(self) -> int:
+        return self.encoded
 
     @property
     def num_sites(self) -> int:

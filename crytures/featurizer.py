@@ -16,10 +16,6 @@ from pymatgen.analysis.chemenv.connectivity.connectivity_finder import Connectiv
 from pymatgen.analysis.chemenv.connectivity.structure_connectivity import StructureConnectivity
 from pymatgen.core.structure import PeriodicSite, Structure
 from pymatgen.util.coord     import get_angle
-from typing import Union, NamedTuple
-
-from .datatypes import Crytures
-from .coding    import encode_features
 
 ## -----------------------------------------------------------------------------
 
@@ -75,7 +71,7 @@ def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> t
 
 ## -----------------------------------------------------------------------------
 
-def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int]) -> Crytures:
+def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int], result : 'Crytures') -> 'Crytures':
     '''
     Calculates the desired primary features (related to the atom and nearest neighbors) based on SC object, 
     returns them as a dictionary. These features are stored for each atom, under their structure index.
@@ -91,7 +87,6 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
     Returns:
         A dictionary with first degree features
     '''
-    result = Crytures()
 
     structure = structure_connectivity.light_structure_environments.structure
     # Take lightStructureEnvironment Obj from StructureConnecivity Obj
@@ -122,7 +117,7 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
 
 ## -----------------------------------------------------------------------------
 
-def compute_features_nnn(structure_connectivity : StructureConnectivity, result : Crytures) -> Crytures:
+def compute_features_nnn(structure_connectivity : StructureConnectivity, result : 'Crytures') -> 'Crytures':
     '''
     Calculates the desired NNN (next nearest neighbors) features based on SC object,
     and adds them to a dictionary (of primary features). These features are stored
@@ -215,36 +210,4 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
 
             result.ce_angles.add_item(connectivity, site, site_to, ligand_indices, angles)
     
-    return result
-
-## -----------------------------------------------------------------------------
-
-def featurize(structure : Structure, env_strategy = 'simple', encode = False) -> dict:
-    '''
-    Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
-    based on SC object, returns them as a dictionary. These features are stored for each atom,
-    under their structure index.
-    Features Include: Oxidation number, type of ion, element, coordination for all atoms.
-    Cation specific features are the local(coordination) env, nearest neighbor elements & distances, 
-    polhedral neighbor elements, distances, connectivity angles & types. 
-
-    Args:
-        structure (Structure):
-            A pymatgen structure object
-        env_strategy (string):
-            The strategy used for computing environments
-    
-    Returns:
-        A dictionary of features for each atom in the structure
-    '''
-    structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
-
-    # Computefirst degree features
-    result = compute_features_first_degree(structure_connectivity, oxid_states)
-    # Compute features between coordination environments
-    result = compute_features_nnn(structure_connectivity, result)
-
-    if encode:
-        result = encode_features(result)
-
     return result
