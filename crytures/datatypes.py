@@ -321,7 +321,7 @@ class Crytures(FancyString, MyMSONable):
 
     @property
     def encoded(self) -> int:
-        return self.encoded
+        return self._encoded
 
     @property
     def num_sites(self) -> int:
