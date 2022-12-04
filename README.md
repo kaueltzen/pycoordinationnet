@@ -18,32 +18,31 @@ with MPRester("Q0tUKnAE52sy7hVO") as m:
 
 The crystal features can be computed directly from the structure object:
 ```python
-from crytures import featurize
+from crytures import Crytures
 
-features = featurize(structure)
+features = Crytures.from_structure(structure)
 ```
 
 The *features* object is a dict object with as many items as there are atoms in the material. The items can be accessed with the atom/site index. Each item contains the oxidation state of the atom (*oxidation*), the local environments (*ce*), the nearest neighbor distances (*distances*), the distances to neighboring coordination environments (*ce_distances*), and the angles between coordination environments (*ce_angles*). Note that complex strategies can return multiple local environments for each site.
 
 ### Coordination environments
 
-The coordination environment of a site is accessed as follows:
+The coordination environment of the first site (isite = 0) is accessed as follows:
 ```python
->>> isite = 0
->>> features[isite]['ce']
+>>> features.get_site_features(0)['ce']
 [{'ce_symbol': 'C:8', 'ce_fraction': 1.0, 'csm': 2.217881949143581, 'permutation': [2, 4, 0, 1, 7, 5, 3, 6]}]
 ```
 The *ce_symbol* specifies the symbol of the coordination environment (*ce*) as defined in the supplementary material of *Waroquiers et al. 2020* [1]. In this example we have *C:8* which refers to a cube where the central site has 8 neighbors. Each coordination environment is attributed a fraction given by the *ce_fraction* item. Since we have only a single coordination environment in this example, we have a *ce_fraction* of one. The Continuous Symmetry Measure (*CSM*) specifies the distance of the coordination environment to the perfect model environment (given by the *csm* item) [2]. The CSM value ranges between zero and 100, where a value of zero represents a perfect match. To compute the similarity of the coordination environment, all possible permutations of neighboring sites must be tested. The permutation with the minimal CSM is given by the *permutation* item.
 
 Note that features are only computed for cations, because they form the centers of coordination environments:
 ```python
->>> features[63]['ion']
+>>> features.get_site_features(63)['ion']
 'cation'
->>> features[63].keys()
+>>> features.get_site_features(63).keys()
 dict_keys(['oxidation', 'ion', 'element', 'coordinates', 'distances', 'ce', 'ce_distances', 'ce_angles'])
->>> features[64]['ion']
+>>> features.get_site_features(64)['ion']
 'anion'
->>> features[64].keys()
+>>> features.get_site_features(64).keys()
 dict_keys(['oxidation', 'ion', 'element', 'coordinates'])
 ```
 
@@ -51,7 +50,7 @@ dict_keys(['oxidation', 'ion', 'element', 'coordinates'])
 
 The distances between the center atom to the nearest neighboring atoms (ligands) are stored in the *distances* item:
 ```python
->>> features[0]['distances']
+>>> features.get_site_features(0)['distances']
 [('Er', 'O', 2.341961770123179), ('Er', 'O', 2.341961770123178), ('Er', 'O', 2.4321915059077597), ('Er', 'O', 2.341961770123179), ('Er', 'O', 2.43219150590776), ('Er', 'O', 2.3419617701231785), ('Er', 'O', 2.43219150590776), ('Er', 'O', 2.43219150590776)]
 ```
 We see that since we have a *C:8* coordination environment that there are 8 nearest neighbors. The first two elements of each tuple denote the atom types from which the distance is measured. The distance is the third entry of each tuple.
@@ -74,9 +73,10 @@ Note that distances and angles are computed for all neighbors by considering sym
 
 Features contain several categorical variables, for instance element names type of angles between coordination environments (i.e. corner, face, etc.). These variables must be encoded such that they can be used as inputs to machine learning models. The simples approach is to replace categorical varibales by integer indices, which enables us to use embeddings for categorical variables. Also the value of oxidation states is not very well suited for machine learning models, which are positive and negative integer values. We also recode oxidation states as positive integers, such that embeddings can be used.
 
-Encoded features can be computed as follows:
+Features can be encoded and decoded as follows:
 ```python
-features = featurize(structure, encode = True)
+features = features.encode()
+features = features.decode()
 ```
 
 ## References
