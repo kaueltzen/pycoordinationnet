@@ -297,7 +297,7 @@ class Crytures(FancyString, MyMSONable):
 
         structure_connectivity, oxid_states = analyze_environment(
             structure,
-            mystrategy = env_strategy,
+            env_strategy = env_strategy,
             additional_conditions = additional_conditions)
 
         # Computefirst degree features
