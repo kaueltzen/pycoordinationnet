@@ -89,7 +89,6 @@ def mp_icsd_query(MPID : str, experimental_data = True) -> str:
     else:
         criteria = {
                 # We don't need this limit for theoretical data 'icsd_ids': {'$ne': []}, #allows data with existing 'icsd_ids' tag
-                'theoretical': {'$ne': experimental_data}, #allows data without the 'theoretical' tag
                 'elements': {'$all': ['O']}, #allows for crystals with Oxygen present
                 'oxide_type': {'$all': ['oxide']}, #allows for oxides (e.g. not peroxide)
                 'nelements': {'$gte': 2}, #allows crystals with at least 2 elements
