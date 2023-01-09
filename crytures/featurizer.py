@@ -19,7 +19,7 @@ from pymatgen.util.coord     import get_angle
 
 ## -----------------------------------------------------------------------------
 
-def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> tuple[StructureConnectivity, list[int]]:
+def analyze_environment(structure : Structure, env_strategy : str, additional_conditions) -> tuple[StructureConnectivity, list[int]]:
     '''
     Analyzes the coordination environments and returns the StructureConnectivity object for the crystal and the list of oxidation states.
     First, BVAnalyzer() calculates the oxidation states. Then, the LocalGeometryFinder() computes the structure_environment object, 
@@ -32,10 +32,10 @@ def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> t
         mystrategy (string):
 	        The simple or combined strategy for calculating the coordination environments
     '''
-    if mystrategy == 'simple':
+    if env_strategy == 'simple':
         strategy = SimplestChemenvStrategy(distance_cutoff=1.4, angle_cutoff=0.3)
     else:
-        strategy = mystrategy
+        strategy = env_strategy
         
     # The BVAnalyzer class implements a maximum a posteriori (MAP) estimation method to determine oxidation states in a structure.
     bv = BVAnalyzer()
@@ -56,7 +56,7 @@ def analyze_environment(structure : Structure, mystrategy : str = 'simple') -> t
     se = lgf.compute_structure_environments(
         only_cations          = True,
         valences              = oxid_states,
-        additional_conditions = [AdditionalConditions.ONLY_ANION_CATION_BONDS])
+        additional_conditions = additional_conditions)
     
     # Get LightStructureEnvironments
     lse = LightStructureEnvironments.from_structure_environments(

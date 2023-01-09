@@ -1,7 +1,9 @@
 
 from monty.json import MSONable
 from monty.serialization import dumpfn, loadfn
+
 from pymatgen.core.structure import Structure
+from pymatgen.analysis.chemenv.utils.defs_utils import AdditionalConditions
 
 from .coding     import encode_features, decode_features
 from .featurizer import analyze_environment, compute_features_first_degree, compute_features_nnn
@@ -273,7 +275,7 @@ class Crytures(FancyString, MyMSONable):
         self._encoded     = encoded
 
     @classmethod
-    def from_structure(cls, structure : Structure, env_strategy = 'simple', encode = False) -> dict:
+    def from_structure(cls, structure : Structure, env_strategy = 'simple', additional_conditions = [AdditionalConditions.ONLY_ANION_CATION_BONDS], encode = False) -> dict:
         '''
         Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
         based on SC object, returns them as a dictionary. These features are stored for each atom,
@@ -293,7 +295,10 @@ class Crytures(FancyString, MyMSONable):
         '''
         result = Crytures()
 
-        structure_connectivity, oxid_states = analyze_environment(structure, mystrategy = env_strategy)
+        structure_connectivity, oxid_states = analyze_environment(
+            structure,
+            mystrategy = env_strategy,
+            additional_conditions = additional_conditions)
 
         # Computefirst degree features
         result = compute_features_first_degree(structure_connectivity, oxid_states, result)
