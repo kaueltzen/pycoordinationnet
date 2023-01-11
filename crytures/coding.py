@@ -70,26 +70,70 @@ def decode_ce_symbol(sym : str) -> int:
 
 ## -----------------------------------------------------------------------------
 
-def encode_features(features : 'Crytures', array_type = list) -> 'Crytures':
-    features      = copy(features)
-    features.base = copy(features.base)
-    features.ces  = copy(features.ces)
-    # Convert base
-    features.base.oxidations = array_type(map(encode_oxidation, features.base.oxidations))
-    features.base.elements   = array_type(map(encode_element  , features.base.elements))
-    features.base.ions       = array_type(map(encode_ion      , features.base.ions))
-    # Convert coordination environments
-    features.ces.ce_symbols  = array_type(map(encode_ce_symbol, features.ces.ce_symbols))
+def encode_sites(sites : 'Sites', array_type = list) -> 'Sites':
+    sites = copy(sites)
+    sites.oxidations = array_type(map(encode_oxidation, sites.oxidations))
+    sites.elements   = array_type(map(encode_element  , sites.elements))
+    sites.ions       = array_type(map(encode_ion      , sites.ions))
+    return sites
+
+## -----------------------------------------------------------------------------
+
+def decode_sites(sites : 'Sites', array_type = list) -> 'Sites':
+    sites = copy(sites)
+    sites.oxidations = array_type(map(decode_oxidation, sites.oxidations))
+    sites.elements   = array_type(map(decode_element  , sites.elements))
+    sites.ions       = array_type(map(decode_ion      , sites.ions))
+    return sites
+
+## -----------------------------------------------------------------------------
+
+def encode_ces(ces : list) -> list:
+    ces = copy(ces)
+    for i, _ in enumerate(ces):
+        ces[i] = copy(ces[i])
+        ces[i]['ce_symbol'] = encode_ce_symbol(ces[i]['ce_symbol'])
+    return ces
+
+## -----------------------------------------------------------------------------
+
+def decode_ces(ces : list) -> list:
+    ces = copy(ces)
+    for i, _ in enumerate(ces):
+        ces[i] = copy(ces[i])
+        ces[i]['ce_symbol'] = decode_ce_symbol(ces[i]['ce_symbol'])
+    return ces
+
+## -----------------------------------------------------------------------------
+
+def encode_neighbors(ce_neighbors : list) -> list:
+    ce_neighbors = copy(ce_neighbors)
+    for i, _ in enumerate(ce_neighbors):
+        ce_neighbors[i] = copy(ce_neighbors[i])
+        ce_neighbors[i]['connectivity'] = AngleTypes[ce_neighbors[i]['connectivity']].value
+    return ce_neighbors
+
+## -----------------------------------------------------------------------------
+
+def decode_neighbors(ce_neighbors : list) -> list:
+    ce_neighbors = copy(ce_neighbors)
+    for i, _ in enumerate(ce_neighbors):
+        ce_neighbors[i] = copy(ce_neighbors[i])
+        ce_neighbors[i]['connectivity'] = AngleTypes(ce_neighbors[i]['connectivity']).name
+    return ce_neighbors
+
+## -----------------------------------------------------------------------------
+
+def encode_features(features : 'Crytures') -> 'Crytures':
+    features              = copy(features)
+    features.sites        = encode_sites    (features.sites)
+    features.ces          = encode_ces      (features.ces)
+    features.ce_neighbors = encode_neighbors(features.ce_neighbors)
     return features
 
-def decode_features(features : 'Crytures', array_type = list) -> 'Crytures':
-    features      = copy(features)
-    features.base = copy(features.base)
-    features.ces  = copy(features.ces)
-    # Convert base
-    features.base.oxidations = array_type(map(decode_oxidation, features.base.oxidations))
-    features.base.elements   = array_type(map(decode_element  , features.base.elements))
-    features.base.ions       = array_type(map(decode_ion      , features.base.ions))
-    # Convert coordination environments
-    features.ces.ce_symbols  = array_type(map(decode_ce_symbol, features.ces.ce_symbols))
+def decode_features(features : 'Crytures') -> 'Crytures':
+    features              = copy(features)
+    features.sites        = decode_sites    (features.sites)
+    features.ces          = decode_ces      (features.ces)
+    features.ce_neighbors = decode_neighbors(features.ce_neighbors)
     return features

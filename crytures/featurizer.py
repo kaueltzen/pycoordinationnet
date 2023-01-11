@@ -96,11 +96,11 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
     for atomIndex, atom in enumerate(lse.neighbors_sets):
         
         if atom == None:
-            result.base.add_item(atomIndex, oxidation_list[atomIndex], 'anion', structure[atomIndex].species_string, structure[atomIndex].coords)
+            result.sites.add_item(atomIndex, oxidation_list[atomIndex], 'anion', structure[atomIndex].species_string, structure[atomIndex].coords)
             # Skip further featurization. We're not analyzing envs with anions
             continue
     
-        result.base.add_item(atomIndex, oxidation_list[atomIndex], 'cation', structure[atomIndex].species_string, structure[atomIndex].coords)
+        result.sites.add_item(atomIndex, oxidation_list[atomIndex], 'cation', structure[atomIndex].species_string, structure[atomIndex].coords)
         # Save coordination environment
         for ce in ce_list[atomIndex]:
             result.ces.add_item(atomIndex, ce['ce_symbol'], ce['ce_fraction'], ce['csm'], ce['permutation'])
@@ -153,8 +153,6 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
 
             # Compute distance
             distance = structure[edge[2]['start']].distance(structure[edge[2]['end']], edge[2]['delta'])
-            # Add result
-            result.ce_distances.add_item(site, site_to, distance)
 
             # Angles calculation
             ligands = edge[2]['ligands']
@@ -169,7 +167,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
             else:
                 connectivity = 'face'
 
-            angles = []
+            angles         = []
             ligand_indices = []
             # For each ligand compute the angle to another coordination environment (central atom)
             for ligand in ligands:
@@ -207,6 +205,6 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
                 angles.append(angle)
                 ligand_indices.append(ligand[0])
 
-            result.ce_angles.add_item(connectivity, site, site_to, ligand_indices, angles)
-    
+            result.ce_neighbors.add_item(site, site_to, distance, connectivity, ligand_indices, angles)
+
     return result
