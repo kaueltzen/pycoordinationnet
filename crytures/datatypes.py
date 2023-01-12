@@ -79,11 +79,11 @@ class CoordinationEnvironments(list, MyMSONable):
 
     def add_item(self, site, ce_symbol, ce_fraction, csm, permutation) -> None:
         self.append({
-                'site'        : site,
-                'ce_symbol'   : ce_symbol,
-                'ce_fraction' : ce_fraction,
-                'csm'         : csm,
-                'permutation' : permutation
+            'site'        : site,
+            'ce_symbol'   : ce_symbol,
+            'ce_fraction' : ce_fraction,
+            'csm'         : csm,
+            'permutation' : permutation
         })
 
 ## -----------------------------------------------------------------------------
