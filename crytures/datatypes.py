@@ -83,11 +83,11 @@ class CoordinationEnvironments(list, MyMSONable):
         csms          = [ ce['csm']         for ce in ces ]
         permutations  = [ ce['permutation'] for ce in ces ]
         self.append({
-            'site'        : site,
-            'ce_symbol'   : ce_symbols,
-            'ce_fraction' : ce_fractions,
-            'csm'         : csms,
-            'permutation' : permutations
+            'site'         : site,
+            'ce_symbols'   : ce_symbols,
+            'ce_fractions' : ce_fractions,
+            'csms'         : csms,
+            'permutations' : permutations
         })
 
 ## -----------------------------------------------------------------------------
