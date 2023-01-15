@@ -94,16 +94,14 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
     ce_list = lse.coordination_environments
 
     for atomIndex, atom in enumerate(lse.neighbors_sets):
-        
+
         if atom == None:
             result.sites.add_item(atomIndex, oxidation_list[atomIndex], 'anion', structure[atomIndex].species_string, structure[atomIndex].coords)
             # Skip further featurization. We're not analyzing envs with anions
             continue
-    
+
         result.sites.add_item(atomIndex, oxidation_list[atomIndex], 'cation', structure[atomIndex].species_string, structure[atomIndex].coords)
-        # Save coordination environment
-        for ce in ce_list[atomIndex]:
-            result.ces.add_item(atomIndex, ce['ce_symbol'], ce['ce_fraction'], ce['csm'], ce['permutation'])
+        result.ces  .add_item(atomIndex, ce_list[atomIndex])
 
         for nb in atom[0].neighb_sites_and_indices:
             # Pymatgen bug-fix (PeriodicNeighbor cannot be serialized, need to convert to PeriodicSite)
@@ -111,7 +109,7 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
             site     = PeriodicSite.from_dict(nb['site'].as_dict())
             distance = site.distance_from_point(structure[atomIndex].coords)
             result.distances.add_item(atomIndex, nb['index'], distance)
-    
+
     return result
 
 ## -----------------------------------------------------------------------------
@@ -186,7 +184,7 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
                 cart_pos1 = structure.lattice.get_cartesian_coords(pos1)
                 cart_pos2 = structure.lattice.get_cartesian_coords(pos2)
                 cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
-                
+
                 # Measure the angle at the ligand
                 angle = get_angle(cart_pos0 - cart_pos1, cart_pos2 - cart_pos3, units = 'degrees')
 
