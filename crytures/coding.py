@@ -70,20 +70,20 @@ def decode_ce_symbol(sym : str) -> int:
 
 ## -----------------------------------------------------------------------------
 
-def encode_sites(sites : 'Sites', array_type = list) -> 'Sites':
+def encode_sites(sites : 'Sites') -> 'Sites':
     sites = copy(sites)
-    sites.oxidations = array_type(map(encode_oxidation, sites.oxidations))
-    sites.elements   = array_type(map(encode_element  , sites.elements))
-    sites.ions       = array_type(map(encode_ion      , sites.ions))
+    sites.oxidations = list(map(encode_oxidation, sites.oxidations))
+    sites.elements   = list(map(encode_element  , sites.elements))
+    sites.ions       = list(map(encode_ion      , sites.ions))
     return sites
 
 ## -----------------------------------------------------------------------------
 
-def decode_sites(sites : 'Sites', array_type = list) -> 'Sites':
+def decode_sites(sites : 'Sites') -> 'Sites':
     sites = copy(sites)
-    sites.oxidations = array_type(map(decode_oxidation, sites.oxidations))
-    sites.elements   = array_type(map(decode_element  , sites.elements))
-    sites.ions       = array_type(map(decode_ion      , sites.ions))
+    sites.oxidations = list(map(decode_oxidation, sites.oxidations))
+    sites.elements   = list(map(decode_element  , sites.elements))
+    sites.ions       = list(map(decode_ion      , sites.ions))
     return sites
 
 ## -----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ def encode_ces(ces : list) -> list:
     ces = copy(ces)
     for i, _ in enumerate(ces):
         ces[i] = copy(ces[i])
-        ces[i]['ce_symbol'] = encode_ce_symbol(ces[i]['ce_symbol'])
+        ces[i]['ce_symbols'] = list(map(encode_ce_symbol, ces[i]['ce_symbols']))
     return ces
 
 ## -----------------------------------------------------------------------------
@@ -101,7 +101,7 @@ def decode_ces(ces : list) -> list:
     ces = copy(ces)
     for i, _ in enumerate(ces):
         ces[i] = copy(ces[i])
-        ces[i]['ce_symbol'] = decode_ce_symbol(ces[i]['ce_symbol'])
+        ces[i]['ce_symbols'] = list(map(decode_ce_symbol, ces[i]['ce_symbols']))
     return ces
 
 ## -----------------------------------------------------------------------------
