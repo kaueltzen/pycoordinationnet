@@ -35,8 +35,11 @@ def analyze_environment(structure : Structure, env_strategy : str, additional_co
         strategy = SimplestChemenvStrategy(distance_cutoff=1.4, angle_cutoff=0.3)
     else:
         strategy = env_strategy
-        
+
     # The BVAnalyzer class implements a maximum a posteriori (MAP) estimation method to determine oxidation states in a structure.
+    # TODO:
+    # Extend similar to emmet:
+    # https://github.com/materialsproject/emmet/blob/1a185027d017475e6112164df50428a0b06406c8/emmet-core/emmet/core/oxidation_states.py#L71
     bv = BVAnalyzer()
     oxid_states = bv.get_valences(structure)
     
