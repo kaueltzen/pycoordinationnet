@@ -75,6 +75,7 @@ class Geoformer:
 
     def train(self, data : GeoformerData):
 
+        # We always need a new trainer for training the model
         self._setup_trainer_()
 
         if type(data) != GeoformerData:
