@@ -9,6 +9,8 @@ from monty.serialization import loadfn
 from .features_datatypes import Crytures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
 
+from .model_config import GeoformerConfig
+
 ## -----------------------------------------------------------------------------
 
 class Range():
@@ -718,7 +720,7 @@ class CryturesCeNeighborsBatch(Batch):
 ## ----------------------------------------------------------------------------
 
 class CryturesBatch(Batch):
-    def __init__(self, crytures_list : list[Crytures], model_config) -> None:
+    def __init__(self, crytures_list : list[Crytures], model_config : GeoformerConfig) -> None:
         super().__init__()
 
         self.composition           = None
