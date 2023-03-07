@@ -430,7 +430,7 @@ class ModelTransformer(torch.nn.Module):
 
         super().__init__()
 
-        print(f'Constructing model with config:\n{model_config}')
+        print(f'{model_config}')
 
         self.transformer_composition   = None
         self.transformer_sites         = None
@@ -439,35 +439,28 @@ class ModelTransformer(torch.nn.Module):
         self.transformer_ce_neighbors  = None
 
         # Optional site components
-        sites_oxid            = self._check_config(model_config, 'sites_oxid')
-        sites_ces             = self._check_config(model_config, 'sites_ces')
+        sites_oxid            = model_config['sites_oxid']
+        sites_ces             = model_config['sites_ces']
         # Optional site feature components
-        site_features_oxid    = self._check_config(model_config, 'site_features_oxid')
-        site_features_csms    = self._check_config(model_config, 'site_features_csms')
-        site_features_ligands = self._check_config(model_config, 'site_features_ligands')
+        site_features_oxid    = model_config['site_features_oxid']
+        site_features_csms    = model_config['site_features_csms']
+        site_features_ligands = model_config['site_features_ligands']
 
-        if self._check_config(model_config, 'composition'):
+        if model_config['composition']:
             self.transformer_composition   = ModelComposition            (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, **kwargs)
-        if self._check_config(model_config, 'sites'):
+        if model_config['sites']:
             self.transformer_sites         = ModelSitesTransformer       (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, oxidation = sites_oxid, ces = sites_ces, **kwargs)
-        if self._check_config(model_config, 'ligands'):
+        if model_config['ligands']:
             self.transformer_ligands       = ModelLigandsTransformer     (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, **kwargs)
-        if self._check_config(model_config, 'site_features'):
+        if model_config['site_features']:
             self.transformer_site_features = ModelSiteFeaturesTransformer(edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, oxidation = site_features_oxid, csms = site_features_csms, ligands = site_features_ligands, **kwargs)
-        if self._check_config(model_config, 'ce_neighbors'):
+        if model_config['ce_neighbors']:
             self.transformer_ce_neighbors  = ModelCeNeighborsTransformer (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, **kwargs)
 
         # Final dense layer
         self.dense = ModelDense(layers, **kwargs)
 
         print(f'Creating a transformer model with {self.n_parameters:,} parameters')
-
-    def _check_config(cls, model_config : dict, key):
-        if key in model_config:
-            return model_config[key]
-        else:
-            print(f'Warning: model config does not contain option `{key}`, using `False` as default')
-            return False
 
     def _add_if_available_(self, x, y):
         if x is None:

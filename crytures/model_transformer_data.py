@@ -729,28 +729,28 @@ class CryturesBatch(Batch):
         self.ligands               = None
         self.ce_neighbors          = None
 
-        if self._check_config(model_config, 'ce_neighbors') and not self._check_config(model_config, 'site_features_ces'):
+        if model_config['ce_neighbors'] and not model_config['site_features_ces']:
             raise ValueError('Option `ce_neighbors` requires `site_features_ces`')
 
-        if self._check_config(model_config, 'composition'):
+        if model_config['composition']:
             self.composition = CryturesCompositionBatch(crytures_list)
 
-        if self._check_config(model_config, 'sites'):
-            self.sites = CryturesSitesBatch(crytures_list, oxidation = self._check_config(model_config, 'sites_oxid'), ces = self._check_config(model_config, 'sites_ces'))
+        if model_config['sites']:
+            self.sites = CryturesSitesBatch(crytures_list, oxidation = model_config['sites_oxid'], ces = model_config['sites_ces'])
 
-        if self._check_config(model_config, 'site_features'):
+        if model_config['site_features']:
             self.site_features = CryturesSiteFeaturesBatch(crytures_list)
 
-        if self._check_config(model_config, 'site_features_ces'):
+        if model_config['site_features_ces']:
             self.site_features_ces = CryturesCeSitesBatch(crytures_list)
 
-        if self._check_config(model_config, 'site_features_ligands'):
+        if model_config['site_features_ligands']:
             self.site_features_ligands = CryturesLigandSitesBatch(crytures_list)
 
-        if self._check_config(model_config, 'ligands'):
+        if model_config['ligands']:
             self.ligands = CryturesLigandsBatch(crytures_list)
 
-        if self._check_config(model_config, 'ce_neighbors'):
+        if model_config['ce_neighbors']:
             self.ce_neighbors = CryturesCeNeighborsBatch(crytures_list, self.site_features_ces)
 
     def _check_config(self, model_config : dict, key):

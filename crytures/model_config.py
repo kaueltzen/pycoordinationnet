@@ -5,6 +5,8 @@
 _model_config = {
     'composition'           : False,
     'sites'                 : False,
+    'sites_oxid'            : False,
+    'sites_ces'             : False,
     'site_features'         : False,
     'site_features_ces'     : False,
     'site_features_oxid'    : False,
