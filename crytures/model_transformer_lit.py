@@ -6,7 +6,7 @@ from monty.serialization import dumpfn
 
 from sklearn.model_selection import KFold
 
-from .model_estimator        import Lamb
+from .model_optimizer        import Lamb
 from .model_transformer      import ModelTransformer
 from .model_transformer_data import CryturesData, CryturesLoader
 
