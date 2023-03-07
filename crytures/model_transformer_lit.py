@@ -122,38 +122,57 @@ class LitCryturesData(pl.LightningDataModule):
         if n_splits > 1:
             self.splits   = list(KFold(n_splits, shuffle = shuffle, random_state = random_state).split(self.data.X, self.data.y))
 
+    # Custom method to set the fold for cross-validation
     def setup_fold(self, k):
         if self.n_splits < 2:
             raise ValueError(f'k-fold cross-validation is not available, because n_splits is set to {self.n_splits}')
         self.k = k
 
+    # This function is called by lightning trainer class with
+    # the corresponding stage option
     def setup(self, stage: Optional[str] = None):
-        # Use pre-defined indices to split data into train and test
-        if self.n_splits > 1:
-            train_index, test_index = self.splits[self.k]
-            data_train      = torch.utils.data.Subset(self.data, train_index)
-            data_test       = torch.utils.data.Subset(self.data,  test_index)
-        else:
-            data_train = self.data
-            data_test  = None
-        # Take a piece of the training data for validation
-        data_train, data_val = torch.utils.data.random_split(data_train, [1.0 - self.val_size, self.val_size])
-        # Save result
-        self.data_train = data_train
-        self.data_test  = data_test
-        self.data_val   = data_val
 
+        # Assign train/val datasets for use in dataloaders
+        if stage == 'fit' or stage == None:
+            # Check if we are using cross-validation
+            if self.n_splits > 1:
+                train_index, _ = self.splits[self.k]
+                self.data_train = torch.utils.data.Subset(self.data, train_index)
+            else:
+                self.data_train = self.data
+            # Take a piece of the training data for validation
+            self.data_train, self.data_val = torch.utils.data.random_split(self.data_train, [1.0 - self.val_size, self.val_size])
+
+        # Assign test dataset for use in dataloader(s)
+        if stage == 'test' or stage == None:
+            # Check if we are using cross-validation
+            if self.n_splits > 1:
+                _, test_index = self.splits[self.k]
+                self.data_test = torch.utils.data.Subset(self.data, test_index)
+            else:
+                self.data_test = self.data
+
+        # Assign predict dataset for use in dataloader(s)
+        if stage == 'predict' or stage == None:
+            self.data_predict = self.data
+
+    # Custom method to create a data loader
+    def get_dataloader(self, data):
+        return CryturesLoader(data, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+
+    # The following functions are called by the trainer class to
+    # obtain data loaders
     def train_dataloader(self):
-        return CryturesLoader(self.data_train, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+        return self.get_dataloader(self.data_train)
 
     def val_dataloader(self):
-        return CryturesLoader(self.data_val,   self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+        return self.get_dataloader(self.data_val)
 
     def test_dataloader(self):
-        if self.n_splits < 2:
-            raise ValueError('No test data available, use n_splits > 1')
+        return self.get_dataloader(self.data_test)
 
-        return CryturesLoader(self.data_test,  self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+    def predict_dataloader(self):
+        return self.get_dataloader(self.data_predict)
 
 ## ----------------------------------------------------------------------------
 
