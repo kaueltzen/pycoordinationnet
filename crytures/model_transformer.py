@@ -432,6 +432,8 @@ class ModelTransformer(torch.nn.Module):
 
         print(f'{model_config}')
 
+        self.model_config = model_config
+
         self.transformer_composition   = None
         self.transformer_sites         = None
         self.transformer_site_features = None

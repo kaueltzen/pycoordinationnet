@@ -110,13 +110,13 @@ class VerboseOptimizer(torch.optim.Optimizer):
 ## ----------------------------------------------------------------------------
 
 class LitCryturesData(pl.LightningDataModule):
-    def __init__(self, filename, model_config, n_splits = 1, val_size = 0.2, batch_size = 32, num_workers = 2, shuffle = True, random_state = 42):
+    def __init__(self, data, model_config, n_splits = 1, val_size = 0.2, batch_size = 32, num_workers = 2, shuffle = True, random_state = 42):
         super().__init__()
         self.model_config = model_config
         self.num_workers  = num_workers
         self.val_size     = val_size
         self.batch_size   = batch_size
-        self.data         = CryturesData(filename)
+        self.data         = data
         # Setup k-fold cross-validation if n_splits > 1
         self.n_splits     = n_splits
         if n_splits > 1:

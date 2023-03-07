@@ -3,31 +3,48 @@ import pytorch_lightning as pl
 
 from copy import deepcopy
 
+from .model_transformer     import CryturesData
 from .model_transformer_lit import LitModelTransformer, LitCryturesData, LitProgressBar, LitMetricTracker
 
 ## ----------------------------------------------------------------------------
 
-class GeoformerData(LitCryturesData):
+class GeoformerData(CryturesData):
     pass
 
 ## ----------------------------------------------------------------------------
 
 class Geoformer:
     def __init__(self,
+            # Trainer options
             patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
+            # Data options
+            val_size = 0.1, batch_size = 128, num_workers = 2, shuffle = True, random_state = 42,
+            # Model options
             **kwargs):
 
         self.lit_model           = LitModelTransformer(**kwargs)
         self.lit_trainer         = None
         self.lit_trainer_options = {
-            'patience'   : patience,
-            'max_epochs' : max_epochs,
-            'accelerator': accelerator,
-            'devices'    : devices,
-            'strategy'   : strategy,
+            'patience'    : patience,
+            'max_epochs'  : max_epochs,
+            'accelerator' : accelerator,
+            'devices'     : devices,
+            'strategy'    : strategy,
+        }
+        self.lit_data_options    = {
+            'val_size'    : val_size,
+            'batch_size'  : batch_size,
+            'num_workers' : num_workers,
+            'shuffle'     : shuffle,
+            'random_state': random_state,
         }
 
-    def cross_validataion(self, data : GeoformerData):
+    def cross_validataion(self, data : GeoformerData, n_splits):
+
+        if type(data) != GeoformerData:
+            raise ValueError('Data must be given as GeoformerData')
+
+        data = LitCryturesData(data, self.lit_model.model.model_config, n_splits = n_splits, **self.lit_data_options)
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
@@ -42,9 +59,12 @@ class Geoformer:
             # Clone model
             self.lit_model.model = deepcopy(initial_model)
 
-            # Train and test model
+            # Train model
             best_val_score     = self.train(data)
-            test_y, test_y_hat = self.test (data)
+
+            # Test model
+            self.lit_trainer.test(self.lit_model, data)
+            test_y, test_y_hat = self.lit_model.test_y, self.lit_model.test_y_hat
 
             # Print score
             print(f'Best validation score: {best_val_score}')
@@ -73,13 +93,13 @@ class Geoformer:
             strategy             = self.lit_trainer_options['strategy'],
             callbacks            = [LitProgressBar(), self.lit_early_stopping, self.lit_checkpoint_callback, self.lit_matric_tracker])
 
-    def train(self, data : GeoformerData):
+    def train(self, data):
+
+        if type(data) is not LitCryturesData:
+            data = LitCryturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
 
         # We always need a new trainer for training the model
         self._setup_trainer_()
-
-        if type(data) != GeoformerData:
-            raise ValueError('Data must be given as GeoformerData')
 
         # Train model on train data and use validation data for early stopping
         self.lit_trainer.fit(self.lit_model, data)
@@ -89,16 +109,10 @@ class Geoformer:
 
         return self.lit_checkpoint_callback.best_model_score
 
-    def test(self, data : GeoformerData):
+    def predict(self, data):
 
-        if self.lit_trainer is None:
-            self._setup_trainer_()
-
-        self.lit_trainer.test(self.lit_model, data)
-
-        return self.lit_model.test_y, self.lit_model.test_y_hat
-
-    def predict(self, data : GeoformerData):
+        if type(data) is not LitCryturesData:
+            data = LitCryturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
 
         if self.lit_trainer is None:
             self._setup_trainer_()
