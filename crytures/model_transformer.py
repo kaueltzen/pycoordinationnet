@@ -2,6 +2,7 @@ import torch
 
 from crytures.coding import NumElements, NumOxidations, NumAngleTypes, NumGeometries
 
+from .model_config           import DefaultGeoformerConfig
 from .model_estimator        import ModelEstimator, Lamb
 from .model_layers           import ModelDense, ElementEmbedder, RBFLayer
 from .model_transformer_data import CryturesData, CryturesLoader
@@ -419,8 +420,13 @@ class ModelCeNeighborsTransformer(torch.nn.Module):
 ## ----------------------------------------------------------------------------
 
 class ModelTransformer(torch.nn.Module):
-    def __init__(self, layers, model_config, edim = 128, nencoders = 4, nheads = 4, dim_feedforward = 2048, dropout_transformer = 0.1, **kwargs):
+    def __init__(self,
+        # Specify model components
+        model_config = DefaultGeoformerConfig,
+        # Transformer options
+        edim = 200, nencoders = 4, nheads = 4, dim_feedforward = 200, dropout_transformer = 0.0,
         # **kwargs contains options for dense layers
+        layers = [200, 4096, 1024, 512, 128, 1], **kwargs):
 
         super().__init__()
 

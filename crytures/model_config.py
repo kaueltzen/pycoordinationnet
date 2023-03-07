@@ -16,7 +16,7 @@ _model_config = {
 
 ## ----------------------------------------------------------------------------
 
-class ModelConfig(dict):
+class GeoformerConfig(dict):
     def __init__(self, *args, **kwargs):
         # Set default values
         for key, value in _model_config.items():
@@ -43,7 +43,7 @@ class ModelConfig(dict):
 
 ## ----------------------------------------------------------------------------
 
-DefaultModelConfig = ModelConfig(
+DefaultGeoformerConfig = GeoformerConfig(
     site_features      = True,
     site_features_ces  = True,
     site_features_oxid = True,

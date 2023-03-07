@@ -17,7 +17,7 @@ logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 
 ## ----------------------------------------------------------------------------
 
-class MetricTracker(pl.callbacks.Callback):
+class LitMetricTracker(pl.callbacks.Callback):
   def __init__(self):
     self.val_error_batch   = []
     self.val_error         = []
@@ -159,7 +159,6 @@ class LitCryturesData(pl.LightningDataModule):
 
 class LitModelTransformer(pl.LightningModule):
     def __init__(self,
-                 layers, model_config,
                  # Learning rate
                  lr = 1e-3, lr_groups = {},
                  # Weight decay
@@ -177,7 +176,7 @@ class LitModelTransformer(pl.LightningModule):
         self.optimizer         = optimizer
         self.optimizer_verbose = optimizer_verbose
         self.scheduler         = scheduler
-        self.model             = ModelTransformer(layers, model_config, **kwargs)
+        self.model             = ModelTransformer(**kwargs)
     
     def configure_optimizers(self):
         # Get learning rates

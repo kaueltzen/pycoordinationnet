@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 
-from .model_transformer_lit import LitModelTransformer, LitCryturesData, LitProgressBar, MetricTracker
+from .model_transformer_lit import LitModelTransformer, LitCryturesData, LitProgressBar, LitMetricTracker
 
 ## ----------------------------------------------------------------------------
 
@@ -11,12 +11,11 @@ class GeoformerData(LitCryturesData):
 
 class Geoformer(LitModelTransformer):
     def __init__(self,
-            layers, model_config, *args,
             patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
             **kwargs):
-        super().__init__(layers, model_config, *args, **kwargs)
+        super().__init__(**kwargs)
 
-        self.matric_tracker      = MetricTracker()
+        self.matric_tracker      = LitMetricTracker()
         self.early_stopping      = pl.callbacks.EarlyStopping(monitor = 'val_loss', patience = patience)
         self.checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
 

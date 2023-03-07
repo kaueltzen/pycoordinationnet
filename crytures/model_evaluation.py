@@ -4,8 +4,6 @@ import pytorch_lightning as pl
 
 from monty.serialization import dumpfn
 
-from .model_transformer_lit import LitProgressBar, MetricTracker
-
 ## Cross-validation
 ## ----------------------------------------------------------------------------
 
