@@ -5,8 +5,8 @@ from monty.serialization import dumpfn, loadfn
 from pymatgen.core.structure import Structure
 from pymatgen.analysis.chemenv.utils.defs_utils import AdditionalConditions
 
-from .coding     import encode_features, decode_features
-from .featurizer import analyze_environment, compute_features_first_degree, compute_features_nnn
+from .features_coding     import encode_features, decode_features
+from .features_featurizer import analyze_environment, compute_features_first_degree, compute_features_nnn
 
 ## -----------------------------------------------------------------------------
 
