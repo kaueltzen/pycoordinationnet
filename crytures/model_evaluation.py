@@ -10,8 +10,6 @@ from monty.serialization import dumpfn
 def eval_kfold(
         # Arguments
         get_model, data, filename_result,
-        # Options
-        patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
         ):
 
     y_hat = torch.tensor([], dtype = torch.float)
@@ -26,7 +24,8 @@ def eval_kfold(
         model = get_model()
 
         # Train and test model
-        best_val_score, test_y, test_y_hat = model.train_model_and_test(data)
+        best_val_score     = model.train(data)
+        test_y, test_y_hat = model.test (data)
 
         # Print score
         print(f'Best validation score: {best_val_score}')
