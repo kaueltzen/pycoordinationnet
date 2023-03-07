@@ -1,5 +1,4 @@
 
-from collections import UserDict
 
 ## ----------------------------------------------------------------------------
 
@@ -18,10 +17,16 @@ _model_config = {
 ## ----------------------------------------------------------------------------
 
 class ModelConfig(dict):
-    def __init__(self, *args,**kwargs):
+    def __init__(self, *args, **kwargs):
         # Set default values
         for key, value in _model_config.items():
             self[key] = value
+        # Check that we do not accept any invalid
+        # config options
+        for key, value in kwargs.items():
+            if key not in self:
+                raise KeyError(key)
+        # Override default config values
         super().__init__(self, *args, **kwargs)
 
     def __setitem__(self, key, value):
