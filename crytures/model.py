@@ -41,7 +41,7 @@ class Geoformer:
 
     def cross_validataion(self, data : GeoformerData, n_splits):
 
-        if type(data) != GeoformerData:
+        if not isinstance(data, GeoformerData):
             raise ValueError('Data must be given as GeoformerData')
 
         data = LitCryturesData(data, self.lit_model.model.model_config, n_splits = n_splits, **self.lit_data_options)
