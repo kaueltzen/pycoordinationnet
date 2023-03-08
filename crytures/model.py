@@ -49,7 +49,7 @@ class CoordinationNet:
             strategy             = self.lit_trainer_options['strategy'],
             callbacks            = [LitProgressBar(), self.lit_early_stopping, self.lit_checkpoint_callback, self.lit_matric_tracker])
 
-    def cross_validataion(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
+    def cross_validation(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
 
         if not isinstance(data, CoordinationFeaturesData):
             raise ValueError('Data must be given as CoordinationFeaturesData')
@@ -61,7 +61,7 @@ class CoordinationNet:
 
         return self._cross_validataion(data)
 
-    def _cross_validataion(self, data : LitCoordinationFeaturesData):
+    def _cross_validation(self, data : LitCoordinationFeaturesData):
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
