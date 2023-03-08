@@ -32,12 +32,31 @@ class CoordinationNet:
             'num_workers' : num_workers,
         }
 
+    def _setup_trainer_(self):
+        self.lit_matric_tracker      = LitMetricTracker()
+        self.lit_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'val_loss', patience = self.lit_trainer_options['patience'])
+        self.lit_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
+
+        self.lit_trainer = pl.Trainer(
+            enable_checkpointing = True,
+            enable_progress_bar  = True,
+            logger               = False,
+            max_epochs           = self.lit_trainer_options['max_epochs'],
+            accelerator          = self.lit_trainer_options['accelerator'],
+            devices              = self.lit_trainer_options['devices'],
+            strategy             = self.lit_trainer_options['strategy'],
+            callbacks            = [LitProgressBar(), self.lit_early_stopping, self.lit_checkpoint_callback, self.lit_matric_tracker])
+
     def cross_validataion(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
 
         if not isinstance(data, CoordinationFeaturesData):
             raise ValueError('Data must be given as CoordinationFeaturesData')
 
         data  = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
+
+        return self._cross_validataion(data)
+
+    def _cross_validataion(self, data : LitCoordinationFeaturesData):
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
@@ -53,7 +72,7 @@ class CoordinationNet:
             self.lit_model.model = deepcopy(initial_model)
 
             # Train model
-            best_val_score     = self.train(data)
+            best_val_score = self._train(data)
 
             # Test model
             self.lit_trainer.test(self.lit_model, data)
@@ -71,25 +90,13 @@ class CoordinationNet:
 
         return test_loss, y, y_hat
 
-    def _setup_trainer_(self):
-        self.lit_matric_tracker      = LitMetricTracker()
-        self.lit_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'val_loss', patience = self.lit_trainer_options['patience'])
-        self.lit_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
+    def train(self, data : CoordinationFeaturesData):
 
-        self.lit_trainer = pl.Trainer(
-            enable_checkpointing = True,
-            enable_progress_bar  = True,
-            logger               = False,
-            max_epochs           = self.lit_trainer_options['max_epochs'],
-            accelerator          = self.lit_trainer_options['accelerator'],
-            devices              = self.lit_trainer_options['devices'],
-            strategy             = self.lit_trainer_options['strategy'],
-            callbacks            = [LitProgressBar(), self.lit_early_stopping, self.lit_checkpoint_callback, self.lit_matric_tracker])
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
 
-    def train(self, data):
+        return self._train(data)
 
-        if type(data) is not LitCoordinationFeaturesData:
-            data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
+    def _train(self, data : LitCoordinationFeaturesData):
 
         # We always need a new trainer for training the model
         self._setup_trainer_()
@@ -104,8 +111,11 @@ class CoordinationNet:
 
     def predict(self, data):
 
-        if type(data) is not LitCoordinationFeaturesData:
-            data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
+
+        return self._predict(data)
+
+    def _predict(self, data : LitCoordinationFeaturesData):
 
         if self.lit_trainer is None:
             self._setup_trainer_()

@@ -1,14 +1,14 @@
 import torch
 import pytorch_lightning as pl
 
-from typing import Any, Dict, List, Optional
-from monty.serialization import dumpfn
+from typing import Optional
 
 from sklearn.model_selection import KFold
 
 from .model_optimizer        import Lamb
-from .model_transformer      import CoordinationNetModel
+from .model_config           import CoordinationNetConfig
 from .model_data             import CoordinationFeaturesData
+from .model_transformer      import CoordinationNetModel
 from .model_transformer_data import CoordinationFeaturesLoader
 
 ## ----------------------------------------------------------------------------
@@ -111,7 +111,7 @@ class LitVerboseOptimizer(torch.optim.Optimizer):
 ## ----------------------------------------------------------------------------
 
 class LitCoordinationFeaturesData(pl.LightningDataModule):
-    def __init__(self, data, model_config, n_splits = 1, val_size = 0.2, batch_size = 32, num_workers = 2, shuffle = True, random_state = 42):
+    def __init__(self, data : CoordinationFeaturesData, model_config : CoordinationNetConfig, n_splits = 1, val_size = 0.2, batch_size = 32, num_workers = 2, shuffle = True, random_state = 42):
         super().__init__()
         self.model_config = model_config
         self.num_workers  = num_workers

@@ -1,6 +1,6 @@
 import torch
 
-from .features_coding import NumElements, NumOxidations, NumAngleTypes, NumGeometries
+from .features_coding import NumOxidations, NumGeometries
 
 from .model_config    import DefaultCoordinationNetConfig
 from .model_layers    import ModelDense, ElementEmbedder, RBFLayer
