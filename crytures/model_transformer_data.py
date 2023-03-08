@@ -6,10 +6,10 @@ import torch
 from copy import copy
 from monty.serialization import loadfn
 
-from .features_datatypes import Crytures
+from .features_datatypes import CoordinationFeatures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
 
-from .model_config import GeoformerConfig
+from .model_config       import CoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
 
@@ -47,23 +47,23 @@ class Batch():
 
 ## ----------------------------------------------------------------------------
 
-class CryturesCompositionBatch(Batch):
+class BatchComposition(Batch):
 
-    def __init__(self, crytures_list : list[Crytures]) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures]) -> None:
         super().__init__()
 
         # This batch contains all elements of a site and
         # information on the oxidation state
 
         # Number of materials
-        m = len(crytures_list)
+        m = len(cofe_list)
 
-        self.elements = len(crytures_list)*[None]
-        self.sizes    = len(crytures_list)*[None]
+        self.elements = len(cofe_list)*[None]
+        self.sizes    = len(cofe_list)*[None]
 
-        for i, crytures in enumerate(crytures_list):
-            self.elements[i] = torch.tensor(crytures.sites.elements, dtype=torch.int)
-            self.sizes   [i] = len(crytures.sites.elements)
+        for i, features in enumerate(cofe_list):
+            self.elements[i] = torch.tensor(features.sites.elements, dtype=torch.int)
+            self.sizes   [i] = len(features.sites.elements)
 
         # Allocate batch data
         self.cls      = torch.zeros((m, 1), dtype=torch.int)
@@ -84,28 +84,28 @@ class CryturesCompositionBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesSitesBatch(Batch):
+class BatchSites(Batch):
 
-    def __init__(self, crytures_list : list[Crytures], oxidation = True, ces = True) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures], oxidation = True, ces = True) -> None:
         super().__init__()
 
         # This batch contains all elements of a site and
         # information on the oxidation state
 
         # Number of materials
-        m = len(crytures_list)
+        m = len(cofe_list)
 
-        self.elements   = len(crytures_list)*[None]
-        self.oxidations = len(crytures_list)*[None] if oxidation else None
-        self.ces        = len(crytures_list)*[None] if ces       else None
+        self.elements   = len(cofe_list)*[None]
+        self.oxidations = len(cofe_list)*[None] if oxidation else None
+        self.ces        = len(cofe_list)*[None] if ces       else None
 
-        for i, crytures in enumerate(crytures_list):
-            self.elements[i] = torch.tensor(crytures.sites.elements, dtype=torch.int)
+        for i, features in enumerate(cofe_list):
+            self.elements[i] = torch.tensor(features.sites.elements, dtype=torch.int)
             # Add optional features
             if oxidation:
-                self.oxidations[i] = torch.tensor(crytures.sites.oxidations, dtype=torch.int)
+                self.oxidations[i] = torch.tensor(features.sites.oxidations, dtype=torch.int)
             if ces:
-                self.ces[i] = self.__get_ces__(crytures)
+                self.ces[i] = self.__get_ces__(features)
 
         # Allocate batch data
         self.cls        = torch.zeros((m, 1), dtype=torch.int)
@@ -116,13 +116,13 @@ class CryturesSitesBatch(Batch):
         self.mask       = self.elements == NumElements
         self.mask       = torch.cat((torch.tensor([m*[False]]).T, self.mask), dim=1)
 
-    def __get_ces__(self, crytures):
+    def __get_ces__(self, features):
         # Each site may have multiple CEs, but in almost all cases a site fits only one CE.
         # Some sites (anions) do not have any site information, where we use the value
         # `NumGeometries`. Note that this value is also used for padding, but the mask
         # prevents the transformer to attend to padded values
-        ces = torch.tensor(len(crytures.sites.elements)*[NumGeometries], dtype=torch.int)
-        for ce in crytures.ces:
+        ces = torch.tensor(len(features.sites.elements)*[NumGeometries], dtype=torch.int)
+        for ce in features.ces:
             # Get site index
             j = ce['site']
             # Consider only the first CE symbol
@@ -153,9 +153,9 @@ class CryturesSitesBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesSiteFeaturesBatch(Batch):
+class BatchSiteFeatures(Batch):
 
-    def __init__(self, crytures_list : list[Crytures]) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures]) -> None:
         super().__init__()
 
         # This batch contains all elements of a site and
@@ -163,44 +163,44 @@ class CryturesSiteFeaturesBatch(Batch):
 
         # Determine the number of sites, which the corresponds to the number of
         # items in the batch
-        m = self.__compute_m__(crytures_list)
+        m = self.__compute_m__(cofe_list)
 
         # Allocate batch data
         self.cls        = torch.zeros((m, 1), dtype=torch.int)
         self.elements   = torch.zeros((m, 1), dtype=torch.int)
         self.oxidations = torch.zeros((m, 1), dtype=torch.int)
-        self.summation  = self.__compute_s__(crytures_list, m)
+        self.summation  = self.__compute_s__(cofe_list, m)
 
-        # Extract data from crytures objects
-        self.__init_data__(crytures_list)
+        # Extract data from features objects
+        self.__init_data__(cofe_list)
 
-    def __init_data__(self, crytures_list : list[Crytures]) -> None:
+    def __init_data__(self, cofe_list : list[CoordinationFeatures]) -> None:
         offset = 0
-        for crytures in crytures_list:
-            n = len(crytures.sites.elements)
+        for features in cofe_list:
+            n = len(features.sites.elements)
 
-            self.elements  [offset:(offset+n), 0] = torch.tensor(crytures.sites.elements  , dtype=torch.int)
-            self.oxidations[offset:(offset+n), 0] = torch.tensor(crytures.sites.oxidations, dtype=torch.int)
+            self.elements  [offset:(offset+n), 0] = torch.tensor(features.sites.elements  , dtype=torch.int)
+            self.oxidations[offset:(offset+n), 0] = torch.tensor(features.sites.oxidations, dtype=torch.int)
 
             offset += n
 
     @classmethod
-    def __compute_m__(cls, crytures_list : list[Crytures]) -> int:
+    def __compute_m__(cls, cofe_list : list[CoordinationFeatures]) -> int:
         m = 0
-        for crytures in crytures_list:
-            m += len(crytures.sites.elements)
+        for features in cofe_list:
+            m += len(features.sites.elements)
         return m
 
     @classmethod
-    def __compute_s__(cls, crytures_list : list[Crytures], m : int) -> torch.Tensor:
+    def __compute_s__(cls, cofe_list : list[CoordinationFeatures], m : int) -> torch.Tensor:
         # Construct summation matrix
-        n = len(crytures_list)
+        n = len(cofe_list)
         S = torch.zeros(m, n)
         # Site index (rows)
         i = 0
         # Loop over materials (columns)
-        for j, crytures in enumerate(crytures_list):
-            l = len(crytures.sites.elements)
+        for j, features in enumerate(cofe_list):
+            l = len(features.sites.elements)
             if l > 0:
                 S[i:(i+l), j] = 1.0 / l
                 i += l
@@ -238,9 +238,9 @@ class CryturesSiteFeaturesBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesCeSitesBatch(Batch):
+class BatchCeSites(Batch):
 
-    def __init__(self, crytures_list : list[Crytures]) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures]) -> None:
         super().__init__()
 
         # This batch contains for each sites the coordination
@@ -248,7 +248,7 @@ class CryturesCeSitesBatch(Batch):
 
         # Determine the number of coordination environments (m) and
         # the number of sites (p)
-        m, p = self.__compute_m_and_p__(crytures_list)
+        m, p = self.__compute_m_and_p__(cofe_list)
 
         # Allocate batch data
         self.cls        = torch.zeros((m, 1), dtype=torch.int)
@@ -256,28 +256,28 @@ class CryturesCeSitesBatch(Batch):
         self.csms       = torch.zeros((m, 1), dtype=torch.float)
         # The summation matrix allows to reduce a batch of coordination
         # environments to a batch of sites across several materials
-        self.__compute_s_and_index__(crytures_list, m, p)
+        self.__compute_s_and_index__(cofe_list, m, p)
 
-        # Extract data from crytures objects
-        self.__init_data__(crytures_list)
+        # Extract data from features objects
+        self.__init_data__(cofe_list)
 
-    def __init_data__(self, crytures_list : list[Crytures]) -> None:
+    def __init_data__(self, cofe_list : list[CoordinationFeatures]) -> None:
         # Initialize ce_symbols to padding value
         self.ce_symbols[:,0] = NumGeometries
         # CE index
         i = 0
         # Loop over materials
-        for crytures in crytures_list:
+        for features in cofe_list:
             # Map site indices to coordination environments
-            ce_symbols = len(crytures.sites.elements)*[None]
-            csms       = len(crytures.sites.elements)*[None]
+            ce_symbols = len(features.sites.elements)*[None]
+            csms       = len(features.sites.elements)*[None]
             # Loop over coordination environments
-            for ces in crytures.ces:
+            for ces in features.ces:
                 i_site = ces['site']
                 ce_symbols[i_site] = ces['ce_symbols']
                 csms      [i_site] = ces['csms']
             # Fill results into our data vectors
-            for i_site, _ in enumerate(crytures.sites.elements):
+            for i_site, _ in enumerate(features.sites.elements):
                 if ce_symbols[i_site] is None:
                     # This site does not have a coordination environment, we
                     # simply use the padding value here, which has already
@@ -294,30 +294,30 @@ class CryturesCeSitesBatch(Batch):
                     i += len(ce_symbols[i_site])
 
     @classmethod
-    def __compute_m_and_p__(cls, crytures_list : list[Crytures]) -> tuple[int, int]:
+    def __compute_m_and_p__(cls, cofe_list : list[CoordinationFeatures]) -> tuple[int, int]:
         # Number of coordination environments (including padded CEs for anions)
         m = 0
         # Number of sites
         p = 0
         # Loop over materials
-        for crytures in crytures_list:
+        for features in cofe_list:
             # Count number of sites
-            p += len(crytures.sites.elements)
+            p += len(features.sites.elements)
             # Map site indices to coordination environments
-            ce_symbols = len(crytures.sites.elements)*[None]
+            ce_symbols = len(features.sites.elements)*[None]
             # Loop over coordination environments
-            for ces in crytures.ces:
+            for ces in features.ces:
                 i_site = ces['site']
                 ce_symbols[i_site] = ces['ce_symbols']
             # Fill results into our data vectors
-            for i_site, _ in enumerate(crytures.sites.elements):
+            for i_site, _ in enumerate(features.sites.elements):
                 if ce_symbols[i_site] is None:
                     m += 1
                 else:
                     m += len(ce_symbols[i_site])
         return m, p
 
-    def __compute_s_and_index__(self, crytures_list : list[Crytures], m : int, p : int) -> torch.Tensor:
+    def __compute_s_and_index__(self, cofe_list : list[CoordinationFeatures], m : int, p : int) -> torch.Tensor:
         # Construct an index that maps (mat,site) -> {index of final output}
         index = {}
         # Construct summation matrix
@@ -327,15 +327,15 @@ class CryturesCeSitesBatch(Batch):
         # Site index
         j = 0
         # Loop over materials
-        for i_mat, crytures in enumerate(crytures_list):
+        for i_mat, features in enumerate(cofe_list):
             # Map site indices to list of coordination environments for the given site
-            ce_fractions = len(crytures.sites.elements)*[None]
+            ce_fractions = len(features.sites.elements)*[None]
             # Loop over coordination environments
-            for ces in crytures.ces:
+            for ces in features.ces:
                 i_site = ces['site']
                 ce_fractions[i_site] = ces['ce_fractions']
             # Fill results into our data vectors
-            for i_site, _ in enumerate(crytures.sites.elements):
+            for i_site, _ in enumerate(features.sites.elements):
                 if ce_fractions[i_site] is None:
                     # This site does not have a coordination environment,
                     # we just map the padding value to the site
@@ -386,16 +386,16 @@ class CryturesCeSitesBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesLigandSitesBatch(Batch):
+class BatchLigandSites(Batch):
 
-    def __init__(self, crytures_list : list[Crytures]) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures]) -> None:
         super().__init__()
 
         # This batch contains ligand information
 
         # Determine the number of ligands (m) and
         # the number sites (p)
-        m, p = self.__compute_m_and_p__(crytures_list)
+        m, p = self.__compute_m_and_p__(cofe_list)
 
         # Allocate batch data
         self.cls      = torch.zeros((m, 1), dtype=torch.int)
@@ -404,15 +404,15 @@ class CryturesLigandSitesBatch(Batch):
         self.angles   = torch.zeros((m, 1), dtype=torch.float)
         # The summation matrix allows to reduce a batch of ligands
         # to a batch of sites across several materials
-        self.summation  = self.__compute_s__(crytures_list, m, p)
+        self.summation  = self.__compute_s__(cofe_list, m, p)
 
-        # Extract data from crytures objects
-        self.__init_data__(crytures_list)
+        # Extract data from features objects
+        self.__init_data__(cofe_list)
 
-    def __init_data__(self, crytures_list : list[Crytures]) -> None:
+    def __init_data__(self, cofe_list : list[CoordinationFeatures]) -> None:
         i = 0
-        for crytures in crytures_list:
-            for nb in crytures.ce_neighbors:
+        for features in cofe_list:
+            for nb in features.ce_neighbors:
                 l = len(nb['ligand_indices'])
                 if l > 0:
                     self.elements[i:(i+l), 0] = nb['site']
@@ -422,21 +422,21 @@ class CryturesLigandSitesBatch(Batch):
                     i += l
 
     @classmethod
-    def __compute_m_and_p__(cls, crytures_list : list[Crytures]) -> tuple[int, int]:
+    def __compute_m_and_p__(cls, cofe_list : list[CoordinationFeatures]) -> tuple[int, int]:
         m = 0
         p = 0
         # Loop over materials
-        for crytures in crytures_list:
+        for features in cofe_list:
             # Count the number of sites
-            p += len(crytures.sites.elements)
+            p += len(features.sites.elements)
             # Loop over CE neighbor pairs
-            for nb in crytures.ce_neighbors:
+            for nb in features.ce_neighbors:
                 # Count the number of ligands
                 m += len(nb['ligand_indices'])
         return m, p
 
     @classmethod
-    def __compute_s__(cls, crytures_list : list[Crytures], m : int, p : int) -> torch.Tensor:
+    def __compute_s__(cls, cofe_list : list[CoordinationFeatures], m : int, p : int) -> torch.Tensor:
         # Construct summation matrix
         S = torch.zeros(m, p)
         # Ligand index (rows)
@@ -444,9 +444,9 @@ class CryturesLigandSitesBatch(Batch):
         # Site index (columns)
         j = 0
         # Loop over materials
-        for crytures in crytures_list:
+        for features in cofe_list:
             # Loop over CE neighbor pairs
-            for nb in crytures.ce_neighbors:
+            for nb in features.ce_neighbors:
                 # For all ligands of this CE pair...
                 l = len(nb['ligand_indices'])
                 if l > 0:
@@ -454,7 +454,7 @@ class CryturesLigandSitesBatch(Batch):
                     for ligand in nb['ligand_indices']:
                         S[i, j+ligand] = 1; i += 1
             # Increment site index
-            j += len(crytures.sites.elements)
+            j += len(features.sites.elements)
 
         # Compute normalization vector (normalize columns)
         z = S.sum(dim=0)
@@ -492,16 +492,16 @@ class CryturesLigandSitesBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesLigandsBatch(Batch):
+class BatchLigands(Batch):
 
-    def __init__(self, crytures_list : list[Crytures]) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures]) -> None:
         super().__init__()
 
         # This batch contains ligand information
 
         # Determine the number of ligands (m) and
         # the number of ce pairs (p)
-        m, p = self.__compute_m_and_p__(crytures_list)
+        m, p = self.__compute_m_and_p__(cofe_list)
 
         # Allocate batch data
         self.cls      = torch.zeros((m, 1), dtype=torch.int)
@@ -510,15 +510,15 @@ class CryturesLigandsBatch(Batch):
         self.angles   = torch.zeros((m, 1), dtype=torch.float)
         # The summation matrix allows to reduce a batch of ligands
         # to a batch of sites across several materials
-        self.summation  = self.__compute_s__(crytures_list, m, p)
+        self.summation  = self.__compute_s__(cofe_list, m, p)
 
-        # Extract data from crytures objects
-        self.__init_data__(crytures_list)
+        # Extract data from features objects
+        self.__init_data__(cofe_list)
 
-    def __init_data__(self, crytures_list : list[Crytures]) -> None:
+    def __init_data__(self, cofe_list : list[CoordinationFeatures]) -> None:
         i = 0
-        for crytures in crytures_list:
-            for nb in crytures.ce_neighbors:
+        for features in cofe_list:
+            for nb in features.ce_neighbors:
                 l = len(nb['ligand_indices'])
                 if l > 0:
                     self.elements[i:(i+l), 0] = nb['site']
@@ -528,21 +528,21 @@ class CryturesLigandsBatch(Batch):
                     i += l
 
     @classmethod
-    def __compute_m_and_p__(cls, crytures_list : list[Crytures]) -> tuple[int, int]:
+    def __compute_m_and_p__(cls, cofe_list : list[CoordinationFeatures]) -> tuple[int, int]:
         m = 0
         p = 0
         # Loop over materials
-        for crytures in crytures_list:
+        for features in cofe_list:
             # Count the number of pairs
-            p += len(crytures.ce_neighbors)
+            p += len(features.ce_neighbors)
             # Loop over CE neighbor pairs
-            for nb in crytures.ce_neighbors:
+            for nb in features.ce_neighbors:
                 # Count the number of ligands
                 m += len(nb['ligand_indices'])
         return m, p
 
     @classmethod
-    def __compute_s__(cls, crytures_list : list[Crytures], m : int, p : int) -> torch.Tensor:
+    def __compute_s__(cls, cofe_list : list[CoordinationFeatures], m : int, p : int) -> torch.Tensor:
         # Construct summation matrix
         S = torch.zeros(m, p)
         # Ligand index (rows)
@@ -550,9 +550,9 @@ class CryturesLigandsBatch(Batch):
         # CE-pair index (columns)
         j = 0
         # Loop over materials
-        for crytures in crytures_list:
+        for features in cofe_list:
             # Loop over CE neighbor pairs
-            for nb in crytures.ce_neighbors:
+            for nb in features.ce_neighbors:
                 # For all ligands of this CE pair...
                 l = len(nb['ligand_indices'])
                 if l > 0:
@@ -590,9 +590,9 @@ class CryturesLigandsBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesCeNeighborsBatch(Batch):
+class BatchCeNeighbors(Batch):
 
-    def __init__(self, crytures_list : list[Crytures], site_features_ces : CryturesCeSitesBatch) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures], site_features_ces : BatchCeSites) -> None:
         super().__init__()
 
         # This is the final batch containing information
@@ -601,7 +601,7 @@ class CryturesCeNeighborsBatch(Batch):
 
         # Determine the number of CE pairs, which also corresponds to the number of
         # items in the batch
-        m = self.__compute_m__(crytures_list)
+        m = self.__compute_m__(cofe_list)
 
         # Allocate batch data
         self.cls          = torch.zeros((m, 1), dtype=torch.int)
@@ -609,53 +609,53 @@ class CryturesCeNeighborsBatch(Batch):
         self.distances    = torch.zeros((m, 1), dtype=torch.float)
         self.connectivity = torch.zeros((m, 1), dtype=torch.int)
         self.ce_index     = torch.zeros((m, 2), dtype=torch.long)
-        self.summation    = self.__compute_s__(crytures_list, m)
+        self.summation    = self.__compute_s__(cofe_list, m)
 
-        # Extract data from crytures objects
-        self.__init_data__(crytures_list, site_features_ces)
+        # Extract data from features objects
+        self.__init_data__(cofe_list, site_features_ces)
 
-    def __init_data__(self, crytures_list : list[Crytures], site_features_ces : CryturesCeSitesBatch) -> None:
+    def __init_data__(self, cofe_list : list[CoordinationFeatures], site_features_ces : BatchCeSites) -> None:
         offset = 0
-        for i_mat, crytures in enumerate(crytures_list):
-            for i, nb in enumerate(crytures.ce_neighbors):
-                self.elements    [(offset+i), 0] = crytures.sites.elements[nb['site'   ]]
-                self.elements    [(offset+i), 1] = crytures.sites.elements[nb['site_to']]
+        for i_mat, features in enumerate(cofe_list):
+            for i, nb in enumerate(features.ce_neighbors):
+                self.elements    [(offset+i), 0] = features.sites.elements[nb['site'   ]]
+                self.elements    [(offset+i), 1] = features.sites.elements[nb['site_to']]
                 self.connectivity[(offset+i), 0] = nb['connectivity']
                 self.distances   [(offset+i), 0] = nb['distance']
                 self.ce_index    [(offset+i), 0] = site_features_ces.index[ (i_mat, nb['site'   ]) ]
                 self.ce_index    [(offset+i), 1] = site_features_ces.index[ (i_mat, nb['site_to']) ]
 
-            offset += len(crytures.ce_neighbors)
+            offset += len(features.ce_neighbors)
 
     @classmethod
-    def __compute_m__(cls, crytures_list : list[Crytures]) -> int:
+    def __compute_m__(cls, cofe_list : list[CoordinationFeatures]) -> int:
         m = 0
-        for crytures in crytures_list:
-            m += len(crytures.ce_neighbors)
+        for features in cofe_list:
+            m += len(features.ce_neighbors)
         return m
 
     @classmethod
-    def __compute_s__(cls, crytures_list : list[Crytures], m : int) -> torch.Tensor:
+    def __compute_s__(cls, cofe_list : list[CoordinationFeatures], m : int) -> torch.Tensor:
         # Number of materials
-        n = len(crytures_list)
+        n = len(cofe_list)
         # Construct summation matrix
         S = torch.zeros(m, n)
         # Site index (rows)
         i = 0
         # Loop over materials (columns)
-        for j, crytures in enumerate(crytures_list):
-            l = len(crytures.ce_neighbors)
-            q = len(crytures.sites.elements)
+        for j, features in enumerate(cofe_list):
+            l = len(features.ce_neighbors)
+            q = len(features.sites.elements)
             if l == 0:
                 continue
             # Count the number of CE-pairs per site
             c = torch.zeros(q)
             # Normalization constant for each CE-pair
             z = torch.zeros(l)
-            for nb in crytures.ce_neighbors:
+            for nb in features.ce_neighbors:
                 c[nb['site'   ]] += 1.0
                 c[nb['site_to']] += 1.0
-            for k, nb in enumerate(crytures.ce_neighbors):
+            for k, nb in enumerate(features.ce_neighbors):
                 z[k] = 1.0/c[nb['site']] + 1.0/c[nb['site_to']]
             # Assign weights to all ce-pairs
             S[i:(i+l), j] = z / z.sum() / q
@@ -664,8 +664,8 @@ class CryturesCeNeighborsBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesBatch(Batch):
-    def __init__(self, crytures_list : list[Crytures], model_config : GeoformerConfig) -> None:
+class BatchCoordinationFeatures(Batch):
+    def __init__(self, cofe_list : list[CoordinationFeatures], model_config : GeoformerConfig) -> None:
         super().__init__()
 
         self.composition           = None
@@ -680,25 +680,25 @@ class CryturesBatch(Batch):
             raise ValueError('Option `ce_neighbors` requires `site_features_ces`')
 
         if model_config['composition']:
-            self.composition = CryturesCompositionBatch(crytures_list)
+            self.composition = BatchComposition(cofe_list)
 
         if model_config['sites']:
-            self.sites = CryturesSitesBatch(crytures_list, oxidation = model_config['sites_oxid'], ces = model_config['sites_ces'])
+            self.sites = BatchSites(cofe_list, oxidation = model_config['sites_oxid'], ces = model_config['sites_ces'])
 
         if model_config['site_features']:
-            self.site_features = CryturesSiteFeaturesBatch(crytures_list)
+            self.site_features = BatchSiteFeatures(cofe_list)
 
         if model_config['site_features_ces']:
-            self.site_features_ces = CryturesCeSitesBatch(crytures_list)
+            self.site_features_ces = BatchCeSites(cofe_list)
 
         if model_config['site_features_ligands']:
-            self.site_features_ligands = CryturesLigandSitesBatch(crytures_list)
+            self.site_features_ligands = BatchLigandSites(cofe_list)
 
         if model_config['ligands']:
-            self.ligands = CryturesLigandsBatch(crytures_list)
+            self.ligands = BatchLigands(cofe_list)
 
         if model_config['ce_neighbors']:
-            self.ce_neighbors = CryturesCeNeighborsBatch(crytures_list, self.site_features_ces)
+            self.ce_neighbors = BatchCeNeighbors(cofe_list, self.site_features_ces)
 
     def _check_config(self, model_config : dict, key):
         if key in model_config:
@@ -708,9 +708,9 @@ class CryturesBatch(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class CryturesLoader(torch.utils.data.DataLoader):
+class CoordinationFeaturesLoader(torch.utils.data.DataLoader):
 
-    def __init__(self, dataset : CryturesData, model_config, **kwargs) -> None:
+    def __init__(self, dataset : CoordinationFeaturesData, model_config, **kwargs) -> None:
         if 'collate_fn' in kwargs:
             raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
         super().__init__(dataset, collate_fn=self.collate_fn, **kwargs)
@@ -718,9 +718,9 @@ class CryturesLoader(torch.utils.data.DataLoader):
         self.model_config = model_config
 
     def collate_fn(self, batch):
-        crytures_list = [ item[0] for item in batch ]
+        cofe_list = [ item[0] for item in batch ]
 
-        X = CryturesBatch(crytures_list, self.model_config)
+        X = BatchCoordinationFeatures(cofe_list, self.model_config)
         y = torch.utils.data.default_collate([ item[1] for item in batch ])
 
         return X, y

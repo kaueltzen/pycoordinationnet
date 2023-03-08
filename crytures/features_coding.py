@@ -124,14 +124,14 @@ def decode_neighbors(ce_neighbors : list) -> list:
 
 ## -----------------------------------------------------------------------------
 
-def encode_features(features : 'Crytures') -> 'Crytures':
+def encode_features(features : 'CoordinationFeatures') -> 'CoordinationFeatures':
     features              = copy(features)
     features.sites        = encode_sites    (features.sites)
     features.ces          = encode_ces      (features.ces)
     features.ce_neighbors = encode_neighbors(features.ce_neighbors)
     return features
 
-def decode_features(features : 'Crytures') -> 'Crytures':
+def decode_features(features : 'CoordinationFeatures') -> 'CoordinationFeatures':
     features              = copy(features)
     features.sites        = decode_sites    (features.sites)
     features.ces          = decode_ces      (features.ces)

@@ -18,7 +18,7 @@ _model_config = {
 
 ## ----------------------------------------------------------------------------
 
-class GeoformerConfig(dict):
+class CoordinationNetConfig(dict):
     def __init__(self, *args, **kwargs):
         # Set default values
         for key, value in _model_config.items():
@@ -45,7 +45,7 @@ class GeoformerConfig(dict):
 
 ## ----------------------------------------------------------------------------
 
-DefaultGeoformerConfig = GeoformerConfig(
+DefaultCoordinationNetConfig = CoordinationNetConfig(
     site_features      = True,
     site_features_ces  = True,
     site_features_oxid = True,

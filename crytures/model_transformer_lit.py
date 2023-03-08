@@ -7,9 +7,9 @@ from monty.serialization import dumpfn
 from sklearn.model_selection import KFold
 
 from .model_optimizer        import Lamb
-from .model_transformer      import ModelTransformer
-from .model_data             import CryturesData
-from .model_transformer_data import CryturesLoader
+from .model_transformer      import CoordinationNetModel
+from .model_data             import CoordinationFeaturesData
+from .model_transformer_data import CoordinationFeaturesLoader
 
 ## ----------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ class LitProgressBar(pl.callbacks.progress.TQDMProgressBar):
 
 ## ----------------------------------------------------------------------------
 
-class VerboseOptimizer(torch.optim.Optimizer):
+class LitVerboseOptimizer(torch.optim.Optimizer):
     def __init__(self, optimizer):
         self.optimizer         = optimizer
         self.param_groups_copy = None
@@ -110,7 +110,7 @@ class VerboseOptimizer(torch.optim.Optimizer):
 
 ## ----------------------------------------------------------------------------
 
-class LitCryturesData(pl.LightningDataModule):
+class LitCoordinationFeaturesData(pl.LightningDataModule):
     def __init__(self, data, model_config, n_splits = 1, val_size = 0.2, batch_size = 32, num_workers = 2, shuffle = True, random_state = 42):
         super().__init__()
         self.model_config = model_config
@@ -159,7 +159,7 @@ class LitCryturesData(pl.LightningDataModule):
 
     # Custom method to create a data loader
     def get_dataloader(self, data):
-        return CryturesLoader(data, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+        return CoordinationFeaturesLoader(data, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
 
     # The following functions are called by the trainer class to
     # obtain data loaders
@@ -177,7 +177,7 @@ class LitCryturesData(pl.LightningDataModule):
 
 ## ----------------------------------------------------------------------------
 
-class LitModelTransformer(pl.LightningModule):
+class LitCoordinationNet(pl.LightningModule):
     def __init__(self,
                  # Learning rate
                  lr = 1e-3, lr_groups = {},
@@ -196,7 +196,7 @@ class LitModelTransformer(pl.LightningModule):
         self.optimizer         = optimizer
         self.optimizer_verbose = optimizer_verbose
         self.scheduler         = scheduler
-        self.model             = ModelTransformer(**kwargs)
+        self.model             = CoordinationNetModel(**kwargs)
     
     def configure_optimizers(self):
         # Get learning rates
@@ -233,7 +233,7 @@ class LitModelTransformer(pl.LightningModule):
             raise ValueError(f'Unknown optimizer: {self.optimizer}')
 
         if self.optimizer_verbose:
-            optimizer = VerboseOptimizer(optimizer)
+            optimizer = LitVerboseOptimizer(optimizer)
 
         # Initialize scheduler
         if self.scheduler is None:

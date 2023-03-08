@@ -110,7 +110,7 @@ class CeNeighbors(list, MyMSONable):
 
 ## -----------------------------------------------------------------------------
 
-class Crytures(FancyString, MyMSONable):
+class CoordinationFeatures(FancyString, MyMSONable):
 
     def __init__(self, sites = None, distances = None, ces = None, ce_neighbors = None, encoded = False) -> None:
         super().__init__()
@@ -139,7 +139,7 @@ class Crytures(FancyString, MyMSONable):
         Returns:
             A dictionary of features for each atom in the structure
         '''
-        result = Crytures()
+        result = CoordinationFeatures()
 
         structure_connectivity, oxid_states = analyze_environment(
             structure,
@@ -156,19 +156,19 @@ class Crytures(FancyString, MyMSONable):
 
         return result
 
-    def encode(self) -> 'Crytures':
+    def encode(self) -> 'CoordinationFeatures':
         if self._encoded:
             raise ValueError('Features are already encoded')
-        crytures = encode_features(self)
-        crytures._encoded = True
-        return crytures
+        CoordinationFeatures = encode_features(self)
+        CoordinationFeatures._encoded = True
+        return CoordinationFeatures
 
-    def decode(self) -> 'Crytures':
+    def decode(self) -> 'CoordinationFeatures':
         if not self._encoded:
             raise ValueError('Features are already decoded')
-        crytures = decode_features(self)
-        crytures._encoded = False
-        return crytures
+        CoordinationFeatures = decode_features(self)
+        CoordinationFeatures._encoded = False
+        return CoordinationFeatures
 
     @property
     def encoded(self) -> int:

@@ -5,7 +5,7 @@ from monty.serialization import loadfn
 
 ## ----------------------------------------------------------------------------
 
-class CryturesData(torch.utils.data.Dataset):
+class CoordinationFeaturesData(torch.utils.data.Dataset):
 
     def __init__(self, X, y = None) -> None:
 
@@ -17,9 +17,9 @@ class CryturesData(torch.utils.data.Dataset):
 
         self.X = X
 
-        for i, crytures in enumerate(X):
-            if not crytures.encoded:
-                self.X[i] = crytures.encode()
+        for i, features in enumerate(X):
+            if not features.encoded:
+                self.X[i] = features.encode()
 
     def __len__(self):
         return len(self.X)

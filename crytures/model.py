@@ -3,17 +3,12 @@ import pytorch_lightning as pl
 
 from copy import deepcopy
 
-from .model_transformer     import CryturesData
-from .model_transformer_lit import LitModelTransformer, LitCryturesData, LitProgressBar, LitMetricTracker
+from .model_data            import CoordinationFeaturesData
+from .model_transformer_lit import LitCoordinationNet, LitCoordinationFeaturesData, LitProgressBar, LitMetricTracker
 
 ## ----------------------------------------------------------------------------
 
-class GeoformerData(CryturesData):
-    pass
-
-## ----------------------------------------------------------------------------
-
-class Geoformer:
+class CoordinationNet:
     def __init__(self,
             # Trainer options
             patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
@@ -22,7 +17,7 @@ class Geoformer:
             # Model options
             **kwargs):
 
-        self.lit_model           = LitModelTransformer(**kwargs)
+        self.lit_model           = LitCoordinationNet(**kwargs)
         self.lit_trainer         = None
         self.lit_trainer_options = {
             'patience'    : patience,
@@ -39,12 +34,12 @@ class Geoformer:
             'random_state': random_state,
         }
 
-    def cross_validataion(self, data : GeoformerData, n_splits):
+    def cross_validataion(self, data : CoordinationFeaturesData, n_splits):
 
-        if not isinstance(data, GeoformerData):
-            raise ValueError('Data must be given as GeoformerData')
+        if not isinstance(data, CoordinationFeaturesData):
+            raise ValueError('Data must be given as CoordinationFeaturesData')
 
-        data = LitCryturesData(data, self.lit_model.model.model_config, n_splits = n_splits, **self.lit_data_options)
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, **self.lit_data_options)
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
@@ -95,8 +90,8 @@ class Geoformer:
 
     def train(self, data):
 
-        if type(data) is not LitCryturesData:
-            data = LitCryturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
+        if type(data) is not LitCoordinationFeaturesData:
+            data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
 
         # We always need a new trainer for training the model
         self._setup_trainer_()
@@ -111,8 +106,8 @@ class Geoformer:
 
     def predict(self, data):
 
-        if type(data) is not LitCryturesData:
-            data = LitCryturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
+        if type(data) is not LitCoordinationFeaturesData:
+            data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
 
         if self.lit_trainer is None:
             self._setup_trainer_()

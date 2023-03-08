@@ -73,7 +73,7 @@ def analyze_environment(structure : Structure, env_strategy : str, additional_co
 
 ## -----------------------------------------------------------------------------
 
-def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int], result : 'Crytures') -> 'Crytures':
+def compute_features_first_degree(structure_connectivity : StructureConnectivity, oxidation_list : list[int], result : 'CoordinationFeatures') -> 'CoordinationFeatures':
     '''
     Calculates the desired primary features (related to the atom and nearest neighbors) based on SC object, 
     returns them as a dictionary. These features are stored for each atom, under their structure index.
@@ -117,7 +117,7 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
 
 ## -----------------------------------------------------------------------------
 
-def compute_features_nnn(structure_connectivity : StructureConnectivity, result : 'Crytures') -> 'Crytures':
+def compute_features_nnn(structure_connectivity : StructureConnectivity, result : 'CoordinationFeatures') -> 'CoordinationFeatures':
     '''
     Calculates the desired NNN (next nearest neighbors) features based on SC object,
     and adds them to a dictionary (of primary features). These features are stored
