@@ -72,7 +72,7 @@ class CoordinationNet:
             self.lit_model.model = deepcopy(initial_model)
 
             # Train model
-            best_val_score = self._train(data)
+            best_val_score = self._train(data)['best_val_error']
 
             # Test model
             self.lit_trainer.test(self.lit_model, data)
@@ -107,7 +107,12 @@ class CoordinationNet:
         # Get best model
         self.lit_model = self.lit_model.load_from_checkpoint(self.lit_checkpoint_callback.best_model_path)
 
-        return self.lit_checkpoint_callback.best_model_score.item()
+        result = {
+            'best_val_error': self.lit_checkpoint_callback.best_model_score.item(),
+            'train_error'   : torch.stack(self.lit_matric_tracker.train_error).tolist(),
+            'val_error'     : torch.stack(self.lit_matric_tracker.val_error  ).tolist() }
+
+        return result
 
     def predict(self, data):
 
