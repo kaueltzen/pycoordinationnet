@@ -417,7 +417,7 @@ class ModelCeNeighborsTransformer(torch.nn.Module):
 
 ## ----------------------------------------------------------------------------
 
-class CoordinationNetModel(torch.nn.Module):
+class ModelCoordinationNet(torch.nn.Module):
     def __init__(self,
         # Specify model components
         model_config = DefaultCoordinationNetConfig,

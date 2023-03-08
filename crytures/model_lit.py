@@ -8,7 +8,7 @@ from sklearn.model_selection import KFold
 from .model_optimizer        import Lamb
 from .model_config           import CoordinationNetConfig
 from .model_data             import CoordinationFeaturesData
-from .model_transformer      import CoordinationNetModel
+from .model_transformer      import ModelCoordinationNet
 from .model_transformer_data import CoordinationFeaturesLoader
 
 ## ----------------------------------------------------------------------------
@@ -196,7 +196,7 @@ class LitCoordinationNet(pl.LightningModule):
         self.optimizer         = optimizer
         self.optimizer_verbose = optimizer_verbose
         self.scheduler         = scheduler
-        self.model             = CoordinationNetModel(**kwargs)
+        self.model             = ModelCoordinationNet(**kwargs)
     
     def configure_optimizers(self):
         # Get learning rates
