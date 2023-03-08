@@ -1,3 +1,4 @@
+import dill
 import torch
 import pytorch_lightning as pl
 
@@ -134,10 +135,17 @@ class CoordinationNet:
         return torch.cat(y_hat_batched, dim=0)
 
     @classmethod
-    def load(filename : str) -> 'CoordinationNet':
+    def load(cls, filename : str) -> 'CoordinationNet':
 
-        pass
+        with open(filename, 'rb') as f:
+            model = dill.load(f)
 
-    def save(filename : str) -> None:
+        if not isinstance(model, cls):
+            raise ValueError(f'file {filename} contains incorrect model class {type(model)}')
 
-        pass
+        return model
+
+    def save(self, filename : str) -> None:
+
+        with open(filename, 'wb') as f:
+            dill.dump(self, f)
