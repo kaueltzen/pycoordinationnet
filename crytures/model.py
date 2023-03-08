@@ -13,7 +13,7 @@ class CoordinationNet:
             # Trainer options
             patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
             # Data options
-            val_size = 0.1, batch_size = 128, num_workers = 2, shuffle = True, random_state = 42,
+            val_size = 0.1, batch_size = 128, num_workers = 2,
             # Model options
             **kwargs):
 
@@ -30,16 +30,14 @@ class CoordinationNet:
             'val_size'    : val_size,
             'batch_size'  : batch_size,
             'num_workers' : num_workers,
-            'shuffle'     : shuffle,
-            'random_state': random_state,
         }
 
-    def cross_validataion(self, data : CoordinationFeaturesData, n_splits):
+    def cross_validataion(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
 
         if not isinstance(data, CoordinationFeaturesData):
             raise ValueError('Data must be given as CoordinationFeaturesData')
 
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, **self.lit_data_options)
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
