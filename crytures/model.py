@@ -3,8 +3,8 @@ import pytorch_lightning as pl
 
 from copy import deepcopy
 
-from .model_data            import CoordinationFeaturesData
-from .model_transformer_lit import LitCoordinationNet, LitCoordinationFeaturesData, LitProgressBar, LitMetricTracker
+from .model_data import CoordinationFeaturesData
+from .model_lit  import LitCoordinationNet, LitCoordinationFeaturesData, LitProgressBar, LitMetricTracker
 
 ## ----------------------------------------------------------------------------
 
