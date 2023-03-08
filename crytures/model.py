@@ -37,7 +37,7 @@ class CoordinationNet:
         if not isinstance(data, CoordinationFeaturesData):
             raise ValueError('Data must be given as CoordinationFeaturesData')
 
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
+        data  = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
