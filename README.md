@@ -1,4 +1,78 @@
-## CRYstal feaTURES (CRYTURES)
+## CoordinationNet
+
+### Run cross-validation
+
+```python
+
+from coordinationnet import CoordinationNet, CoordinationNetConfig
+
+from monty.serialization import dumpfn
+
+
+model_config = CoordinationNetConfig(
+    site_features         = True,
+    site_features_ces     = True,
+    site_features_oxid    = True,
+    site_features_csms    = True,
+)
+
+### Create model
+### ---------------------------------------------------------------------------
+
+model = CoordinationNet(
+    # Model components
+    model_config = model_config,
+    # Dense layer options
+    layers = [200, 4096, 1024, 512, 128, 1], dropout = 0.0, skip_connections = False, batchnorm = False,
+    # Transformer options
+    edim = 200, nencoders = 4, nheads = 4, dropout_transformer = 0.0, dim_feedforward = 200,
+    # Data options
+    batch_size = 128, num_workers = 10,
+    # Optimizer options
+    scheduler = 'plateau', devices=[2], patience = 2, lr = 1e-4)
+
+### Create torch dataset
+### ---------------------------------------------------------------------------
+
+data = MPOxidesData('../../precomputed/mp_oxides_crytures.json.gz')
+
+#%% Cross-validation
+### ---------------------------------------------------------------------------
+
+mae, y, y_hat = model.cross_validation(data, 50)
+
+print('Final MAE:', mae)
+
+# Save result
+dumpfn({'y_hat': y_hat.tolist(),
+        'y'    : y    .tolist(),
+        'mae'  : mae },
+        'eval-test.txt')
+
+```
+
+### Train and predict
+
+```python
+import matplotlib.pyplot as plt
+
+result = model.train(data)
+
+plt.plot(result['train_error'])
+plt.plot(result['val_error'])
+plt.show()
+
+model.predict(data)
+```
+
+### Save and load model
+
+```python
+model.save('test.dill')
+model = CoordinationNet.load('test.dill')
+```
+
+## Coordination Features
 
 This packages uses *pymatgen* to compute coordination environments, their distances and angles. The output is such that it can be used as features for machine learning models.
 
