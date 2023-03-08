@@ -8,7 +8,8 @@ from sklearn.model_selection import KFold
 
 from .model_optimizer        import Lamb
 from .model_transformer      import ModelTransformer
-from .model_transformer_data import CryturesData, CryturesLoader
+from .model_data             import CryturesData
+from .model_transformer_data import CryturesLoader
 
 ## ----------------------------------------------------------------------------
 
