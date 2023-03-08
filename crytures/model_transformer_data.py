@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import numpy as np
 import torch
 
 from copy import copy
-from monty.serialization import loadfn
 
 from .features_datatypes import CoordinationFeatures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
 
 from .model_config       import CoordinationNetConfig
+from .model_data         import CoordinationFeaturesData
 
 ## ----------------------------------------------------------------------------
 
@@ -665,7 +664,7 @@ class BatchCeNeighbors(Batch):
 ## ----------------------------------------------------------------------------
 
 class BatchCoordinationFeatures(Batch):
-    def __init__(self, cofe_list : list[CoordinationFeatures], model_config : GeoformerConfig) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures], model_config : CoordinationNetConfig) -> None:
         super().__init__()
 
         self.composition           = None

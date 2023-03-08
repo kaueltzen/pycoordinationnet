@@ -303,3 +303,7 @@ class LitCoordinationNet(pl.LightningModule):
         # Save predictions for evaluation
         self.test_y     = y
         self.test_y_hat = y_hat
+
+    def predict_step(self, batch, batch_index):
+        """Prediction on a single batch"""
+        return self.forward(batch[0])

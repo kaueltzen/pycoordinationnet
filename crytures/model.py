@@ -100,7 +100,7 @@ class CoordinationNet:
         # Get best model
         self.lit_model = self.lit_model.load_from_checkpoint(self.lit_checkpoint_callback.best_model_path)
 
-        return self.lit_checkpoint_callback.best_model_score
+        return self.lit_checkpoint_callback.best_model_score.item()
 
     def predict(self, data):
 
@@ -110,4 +110,6 @@ class CoordinationNet:
         if self.lit_trainer is None:
             self._setup_trainer_()
 
-        return self.lit_trainer.predict(self.lit_model, data)
+        y_hat_batched = self.lit_trainer.predict(self.lit_model, data)
+
+        return torch.cat(y_hat_batched, dim=0)
