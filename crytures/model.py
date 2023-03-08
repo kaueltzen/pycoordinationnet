@@ -53,6 +53,9 @@ class CoordinationNet:
         if not isinstance(data, CoordinationFeaturesData):
             raise ValueError('Data must be given as CoordinationFeaturesData')
 
+        if n_splits < 2:
+            raise ValueError(f'k-fold cross-validation requires at least one train/test split by setting n_splits=2 or more, got n_splits={n_splits}')
+
         data  = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
 
         return self._cross_validataion(data)
@@ -129,3 +132,12 @@ class CoordinationNet:
         y_hat_batched = self.lit_trainer.predict(self.lit_model, data)
 
         return torch.cat(y_hat_batched, dim=0)
+
+    @classmethod
+    def load(filename : str) -> 'CoordinationNet':
+
+        pass
+
+    def save(filename : str) -> None:
+
+        pass
