@@ -9,6 +9,7 @@ from .model_lit  import LitCoordinationNet, LitCoordinationFeaturesData, LitProg
 ## ----------------------------------------------------------------------------
 
 class CoordinationNet:
+
     def __init__(self,
             # Trainer options
             patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
@@ -114,7 +115,7 @@ class CoordinationNet:
 
         return result
 
-    def predict(self, data):
+    def predict(self, data : CoordinationFeaturesData):
 
         data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
 
