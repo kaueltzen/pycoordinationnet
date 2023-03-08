@@ -1,8 +1,7 @@
 from setuptools import setup
 
-setup(name='crytures',
+setup(name='CoordinationNet',
       version='0.0.1',
-      description='CRYstal feaTURES (CRYTURES)',
       long_description='file: README.md',
       license='MIT',
       classifiers=[
@@ -11,7 +10,7 @@ setup(name='crytures',
           'Programming Language :: Python :: 3',
       ],
       include_package_data=True,
-      packages=['crytures'],
-      install_requires=['numpy', 'pymatgen'],
+      packages=['coordinationnet'],
+      install_requires=['numpy', 'pymatgen', 'torch', 'pytorch-lightning', 'dill'],
       python_requires='>=3.9',
       )
