@@ -1,0 +1,32 @@
+
+#%% Retrieve oxides from materials project
+### ---------------------------------------------------------------------------
+
+import numpy as np
+
+from coordinationnet import mp_icsd_query, mp_icsd_clean
+
+mats = mp_icsd_query("Q0tUKnAE52sy7hVO", experimental_data = False)
+mats = mp_icsd_clean(mats)
+# Remove 'mp-554015' due to bug #2756
+mats = np.delete(mats, 3394)
+# Need to convert numpy array to list for serialization
+mats = mats.tolist()
+
+# %%
+from coordinationnet import CoordinationFeaturesData
+
+structures = [  mat['structure']                  for mat in mats ]
+targets    = [ [mat['formation_energy_per_atom']] for mat in mats ]
+
+data = CoordinationFeaturesData(structures, y = targets)
+
+#%% Save data
+### ---------------------------------------------------------------------------
+
+data.save('mpoxides.dill')
+
+#%% Load data
+### ---------------------------------------------------------------------------
+
+data = CoordinationFeaturesData.load('mpoxides.dill')
