@@ -33,3 +33,5 @@ data.save('mpoxides.dill')
 ### ---------------------------------------------------------------------------
 
 data = CoordinationFeaturesData.load('mpoxides.dill')
+
+# %%

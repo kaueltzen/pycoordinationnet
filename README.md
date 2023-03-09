@@ -35,28 +35,33 @@ All keyword arguments correspond to the default values and don't have to be spec
 
 ### Creating a data set
 
-Suppose we have a file containing a list of *coordination features* including some target material properties. We create a new data set suitable for CoordinationNet as follows:
+As an example, we retrieve experimental and theoretical oxides from the materials project
 ```python
-from monty.serialization import loadfn
+import numpy as np
 
-class MPOxidesData(CoordinationFeaturesData):
+from coordinationnet import mp_icsd_query, mp_icsd_clean
 
-    def __init__(self, filename, target = 'formation_energy_per_atom'):
-
-        data = loadfn(filename)
-
-        # Get features and target values
-        X = [   x['features'] for x in data ]
-        y = [ [ x[target] ]   for x in data ]
-
-        # Filter outliers
-        X = np.array(X)[ (np.array(y) > -6)[:,0] ].tolist()
-        y = np.array(y)[ (np.array(y) > -6)[:,0] ].tolist()
-
-        super().__init__(X, y = y)
-
-data = MPOxidesData('mp_oxides_crytures.json.gz')
+mats = mp_icsd_query("Q0tUKnAE52sy7hVO", experimental_data = False)
+mats = mp_icsd_clean(mats)
+# Remove 'mp-554015' due to bug #2756
+mats = np.delete(mats, 3394)
+# Need to convert numpy array to list for serialization
+mats = mats.tolist()
 ```
+
+We extract structures and target values (formation energy) from our materials list:
+```python
+structures = [  mat['structure']                  for mat in mats ]
+targets    = [ [mat['formation_energy_per_atom']] for mat in mats ]
+```
+
+For training the network or making predictions, we must convert structures to cooridnation features. This is achieved using:
+```python
+from coordinationnet import CoordinationFeaturesData
+
+data = CoordinationFeaturesData(structures, y = targets, verbose = True)
+```
+Note that *y* (i.e. the target values) is optional and can be left empty if the network is not trained and only used for making predictions.
 
 ### Run cross-validation
 CoordinationNet implements a cross-validation method that can be easily used:
