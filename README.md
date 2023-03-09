@@ -1,13 +1,11 @@
 ## CoordinationNet
 
-### Run cross-validation
+CoordinationNet is a transformer model that uses coordination information to predict materials properties. It is implemented in pytorch/lightning and provides a simple interface for training, predicting and cross-validation.
 
+### Model initialization
+Before creating a new CoordinationNet model, we may create a new model config to specify which components of the model should be active:
 ```python
-
 from coordinationnet import CoordinationNet, CoordinationNetConfig
-
-from monty.serialization import dumpfn
-
 
 model_config = CoordinationNetConfig(
     site_features         = True,
@@ -16,9 +14,8 @@ model_config = CoordinationNetConfig(
     site_features_csms    = True,
 )
 
-### Create model
-### ---------------------------------------------------------------------------
-
+The following code creates a new model instance:
+```python
 model = CoordinationNet(
     # Model components
     model_config = model_config,
@@ -31,15 +28,44 @@ model = CoordinationNet(
     # Optimizer options
     scheduler = 'plateau', devices=[2], patience = 2, lr = 1e-4)
 
-### Create torch dataset
-### ---------------------------------------------------------------------------
+```
+All keyword arguments correspond to the default values and don't have to be specified unless changed.
 
-data = MPOxidesData('../../precomputed/mp_oxides_crytures.json.gz')
 
+### Creating a data set
+
+Suppose we have a file containing a list of *coordination features* including some target material properties. We create a new data set suitable for CoordinationNet as follows:
+```python
+from monty.serialization import loadfn
+
+class MPOxidesData(CoordinationFeaturesData):
+
+    def __init__(self, filename, target = 'formation_energy_per_atom'):
+
+        data = loadfn(filename)
+
+        # Get features and target values
+        X = [   x['features'] for x in data ]
+        y = [ [ x[target] ]   for x in data ]
+
+        # Filter outliers
+        X = np.array(X)[ (np.array(y) > -6)[:,0] ].tolist()
+        y = np.array(y)[ (np.array(y) > -6)[:,0] ].tolist()
+
+        super().__init__(X, y = y)
+
+data = MPOxidesData('mp_oxides_crytures.json.gz')
+```
+
+### Run cross-validation
+CoordinationNet implements a cross-validation method that can be easily used:
+```python
 #%% Cross-validation
 ### ---------------------------------------------------------------------------
 
-mae, y, y_hat = model.cross_validation(data, 50)
+from monty.serialization import dumpfn
+
+mae, y, y_hat = model.cross_validation(data, 10)
 
 print('Final MAE:', mae)
 
@@ -52,7 +78,7 @@ dumpfn({'y_hat': y_hat.tolist(),
 ```
 
 ### Train and predict
-
+Model training and computing predictions:
 ```python
 import matplotlib.pyplot as plt
 
@@ -66,10 +92,10 @@ model.predict(data)
 ```
 
 ### Save and load model
-
+A trained model can be easily saved and loaded using:
 ```python
-model.save('test.dill')
-model = CoordinationNet.load('test.dill')
+model.save('model.dill')
+model = CoordinationNet.load('model.dill')
 ```
 
 ## Coordination Features
