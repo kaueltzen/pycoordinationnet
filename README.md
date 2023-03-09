@@ -13,6 +13,7 @@ model_config = CoordinationNetConfig(
     site_features_oxid    = True,
     site_features_csms    = True,
 )
+```
 
 The following code creates a new model instance:
 ```python
