@@ -1,3 +1,4 @@
+import dill
 import torch
 
 from typing import Any
@@ -40,3 +41,19 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
     # are joined later by collate_fn into a batch
     def __getitem__(self, index):
         return self.X[index], self.y[index]
+
+    @classmethod
+    def load(cls, filename : str) -> 'CoordinationFeaturesData':
+
+        with open(filename, 'rb') as f:
+            data = dill.load(f)
+
+        if not isinstance(data, cls):
+            raise ValueError(f'file {filename} contains incorrect data class {type(data)}')
+
+        return data
+
+    def save(self, filename : str) -> None:
+
+        with open(filename, 'wb') as f:
+            dill.dump(self, f)
