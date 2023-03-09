@@ -61,9 +61,6 @@ data = MPOxidesData('mp_oxides_crytures.json.gz')
 ### Run cross-validation
 CoordinationNet implements a cross-validation method that can be easily used:
 ```python
-#%% Cross-validation
-### ---------------------------------------------------------------------------
-
 from monty.serialization import dumpfn
 
 mae, y, y_hat = model.cross_validation(data, 10)
@@ -75,7 +72,6 @@ dumpfn({'y_hat': y_hat.tolist(),
         'y'    : y    .tolist(),
         'mae'  : mae },
         'eval-test.txt')
-
 ```
 
 ### Train and predict
