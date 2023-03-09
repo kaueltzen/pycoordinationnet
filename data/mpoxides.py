@@ -22,7 +22,7 @@ from coordinationnet import CoordinationFeaturesData
 structures = [  mat['structure']                  for mat in mats ]
 targets    = [ [mat['formation_energy_per_atom']] for mat in mats ]
 
-data = CoordinationFeaturesData(structures, y = targets)
+data = CoordinationFeaturesData(structures, y = targets, verbose = True)
 
 #%% Save data
 ### ---------------------------------------------------------------------------

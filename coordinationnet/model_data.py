@@ -10,7 +10,7 @@ from .features_datatypes import CoordinationFeatures
 
 class CoordinationFeaturesData(torch.utils.data.Dataset):
 
-    def __init__(self, X : list[Any], y = None) -> None:
+    def __init__(self, X : list[Any], y = None, verbose = False) -> None:
 
         if not type(X) == list:
             raise ValueError(f'X must be of type list, but got type {type(X)}')
@@ -27,6 +27,8 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
 
         for i, item in enumerate(X):
             if   isinstance(item, Structure):
+                if verbose:
+                    print(f'Featurizing structure {i+1}/{len(X)}')
                 self.X[i] = CoordinationFeatures.from_structure(item, encode=True)
             elif isinstance(item, CoordinationFeatures):
                 if not item.encoded:
