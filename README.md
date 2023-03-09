@@ -115,9 +115,9 @@ with MPRester("Q0tUKnAE52sy7hVO") as m:
 
 The crystal features can be computed directly from the structure object:
 ```python
-from crytures import Crytures
+from coordinationnet import CoordinationFeatures
 
-features = Crytures.from_structure(structure)
+features = CoordinationFeatures.from_structure(structure)
 ```
 
 The *features* object is a dict object with as many items as there are atoms in the material. The items can be accessed with the atom/site index. Each item contains the oxidation state of the atom (*oxidation*), the local environments (*ce*), the nearest neighbor distances (*distances*), the distances to neighboring coordination environments (*ce_distances*), and the angles between coordination environments (*ce_angles*). Note that complex strategies can return multiple local environments for each site.
