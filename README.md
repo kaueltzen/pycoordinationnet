@@ -27,10 +27,10 @@ model = CoordinationNet(
     # Data options
     batch_size = 128, num_workers = 10,
     # Optimizer options
-    scheduler = 'plateau', devices=[2], patience = 2, lr = 1e-4)
+    scheduler = 'plateau', devices=[2], patience = 2, lr = 1e-4, max_epochs = 1000)
 
 ```
-All keyword arguments correspond to the default values and don't have to be specified unless changed.
+All keyword arguments correspond to default values and don't have to be specified unless changed.
 
 
 ### Creating a data set
