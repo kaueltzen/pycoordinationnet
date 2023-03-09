@@ -13,7 +13,10 @@ mats = np.delete(mats, 3394)
 # Need to convert numpy array to list for serialization
 mats = mats.tolist()
 
-# %%
+#%% Extract structures and target values, convert structures to
+### coordination features (this may take a while)
+### ---------------------------------------------------------------------------
+
 from coordinationnet import CoordinationFeaturesData
 
 structures = [  mat['structure']                  for mat in mats ]
