@@ -52,14 +52,14 @@ class CoordinationNet:
     def cross_validation(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
 
         if not isinstance(data, CoordinationFeaturesData):
-            raise ValueError('Data must be given as CoordinationFeaturesData')
+            raise ValueError(f'Data must be given as CoordinationFeaturesData, but got type {type(data)}')
 
         if n_splits < 2:
             raise ValueError(f'k-fold cross-validation requires at least one train/test split by setting n_splits=2 or more, got n_splits={n_splits}')
 
         data  = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
 
-        return self._cross_validataion(data)
+        return self._cross_validation(data)
 
     def _cross_validation(self, data : LitCoordinationFeaturesData):
 
