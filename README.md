@@ -157,7 +157,7 @@ features = CoordinationFeatures.from_structure(structure)
 
 The *features* object contains information about the oxidation state of sites (*oxidation*), the local environments (*ce*), the nearest neighbor distances (*distances*), the distances to neighboring coordination environments (*ce_distances*), and the angles between coordination environments (*ce_angles*). Note that a site may have multiple local environments.
 
-### Elements, oxidations, ions
+### Elements, oxidations, ions, and distances
 
 The *sites* substructure contains basic information about each site, including elements, oxidation states, and the type of ion. For instance, the oxidation states can be accessed using:
 ```python
@@ -165,6 +165,13 @@ The *sites* substructure contains basic information about each site, including e
 [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2]
 ```
 The list contains the oxidation states for all 160 sites in the material.
+
+The distances between cations neighboring ligands is stored in the *distances* item:
+```python
+>>> features.distances[0]
+{'site': 0, 'site_to': 102, 'distance': 2.341961770123179}
+```
+We see that the first item contains the distance between site 0 (cation) and site 102 (ligand).
 
 ### Coordination environments
 
@@ -177,14 +184,7 @@ We see that this set of environments belongs to site 0. The *ce_symbols* item li
 
 Note that coordination environments are only computed for cations, because they form the centers of coordination environments.
 
-### Distances and angles
-
-The distances between the center atom to the nearest neighboring atoms (ligands) are stored in the *distances* item:
-```python
->>> features.get_site_features(0)['distances']
-[('Er', 'O', 2.341961770123179), ('Er', 'O', 2.341961770123178), ('Er', 'O', 2.4321915059077597), ('Er', 'O', 2.341961770123179), ('Er', 'O', 2.43219150590776), ('Er', 'O', 2.3419617701231785), ('Er', 'O', 2.43219150590776), ('Er', 'O', 2.43219150590776)]
-```
-We see that since we have a *C:8* coordination environment that there are 8 nearest neighbors. The first two elements of each tuple denote the atom types from which the distance is measured. The distance is the third entry of each tuple.
+### Neighboring coordination environments
 
 The *ce_distance* item contains the distances to neighboring coordination environments, always measured from the center atoms.
 ```python
