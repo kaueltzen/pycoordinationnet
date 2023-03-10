@@ -3,35 +3,13 @@
 CoordinationNet is a transformer model that uses coordination information to predict materials properties. It is implemented in pytorch/lightning and provides a simple interface for training, predicting and cross-validation.
 
 ### Model initialization
-Before creating a new CoordinationNet model, we may create a new model config to specify which components of the model should be active:
+
+The following code creates a new model instance with default settings:
 ```python
-from coordinationnet import CoordinationNet, CoordinationNetConfig
+from coordinationnet import CoordinationNet
 
-model_config = CoordinationNetConfig(
-    site_features         = True,
-    site_features_ces     = True,
-    site_features_oxid    = True,
-    site_features_csms    = True,
-)
+model = CoordinationNet()
 ```
-
-The following code creates a new model instance:
-```python
-model = CoordinationNet(
-    # Model components
-    model_config = model_config,
-    # Dense layer options
-    layers = [200, 4096, 1024, 512, 128, 1], dropout = 0.0, skip_connections = False, batchnorm = False,
-    # Transformer options
-    edim = 200, nencoders = 4, nheads = 4, dropout_transformer = 0.0, dim_feedforward = 200,
-    # Data options
-    batch_size = 128, num_workers = 10,
-    # Optimizer options
-    scheduler = 'plateau', devices=[2], patience = 2, lr = 1e-4, max_epochs = 1000)
-
-```
-All keyword arguments correspond to default values and don't have to be specified unless changed.
-
 
 ### Creating a data set
 
@@ -99,6 +77,45 @@ A trained model can be easily saved and loaded using:
 model.save('model.dill')
 model = CoordinationNet.load('model.dill')
 ```
+
+### Advanced model initialization
+CoordinationNet has a modular structure so that individual components can be included or excluded from the model. Which model components are included is controlled using the *CoordinationNetConfig*. The following shows the default values for CoordinationNet:
+```python
+from coordinationnet import CoordinationNetConfig
+
+model_config = CoordinationNetConfig(
+    composition           = False,
+    sites                 = False,
+    sites_oxid            = False,
+    sites_ces             = False,
+    site_features         = True,
+    site_features_ces     = True,
+    site_features_oxid    = True,
+    site_features_csms    = True,
+    site_features_ligands = False,
+    ligands               = False,
+    ce_neighbors          = False,
+)
+```
+
+The following code creates a new model instance with additional keyword arguments:
+```python
+from coordinationnet import CoordinationNet
+
+model = CoordinationNet(
+    # Model components
+    model_config = model_config,
+    # Dense layer options
+    layers = [200, 4096, 1024, 512, 128, 1], dropout = 0.0, skip_connections = False, batchnorm = False,
+    # Transformer options
+    edim = 200, nencoders = 4, nheads = 4, dropout_transformer = 0.0, dim_feedforward = 200,
+    # Data options
+    batch_size = 128, num_workers = 10,
+    # Optimizer options
+    scheduler = 'plateau', devices=[2], patience = 2, lr = 1e-4, max_epochs = 1000)
+
+```
+All keyword arguments correspond to default values and don't have to be specified unless changed.
 
 ## Coordination Features
 
