@@ -3,11 +3,13 @@ import os
 import pytest
 
 from pymatgen.core import Structure
+from pymatgen.analysis.chemenv.utils.defs_utils import AdditionalConditions
+
 from monty.serialization import loadfn
 
-from crytures            import featurize, mp_icsd_clean
-from crytures.featurizer import analyze_environment, compute_features_first_degree
-from crytures.utility    import oxide_check
+from coordinationnet                     import CoordinationFeatures, mp_icsd_clean
+from coordinationnet.features_featurizer import analyze_environment, compute_features_first_degree
+from coordinationnet.features_utility    import oxide_check
 
 ## -----------------------------------------------------------------------------
 
@@ -60,7 +62,7 @@ def env_true():
 
 def test_analyze_env(env_true, testData):    
     for Tdatum in testData:
-        sc, oxid_states = analyze_environment(Tdatum['structure'], mystrategy='simple')
+        sc, oxid_states = analyze_environment(Tdatum['structure'], 'simple', [AdditionalConditions.ONLY_ANION_CATION_BONDS])
         assert oxid_states == env_true[Tdatum['material_id']]['oxid_states']
         assert sc.as_dict()['connectivity_graph'] == env_true[Tdatum['material_id']]['sc'].as_dict()['connectivity_graph']
 
@@ -77,8 +79,10 @@ def test_firstDegreeFeatures(features_true_list, testData):
     for Tdatum in testData:
         features_true = features_true_list[Tdatum['material_id']]
 
-        structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], mystrategy = 'simple')
-        features_test = compute_features_first_degree(structure_connectivity, oxid_states)
+        features_test = CoordinationFeatures()
+
+        structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], 'simple', [AdditionalConditions.ONLY_ANION_CATION_BONDS])
+        features_test = compute_features_first_degree(structure_connectivity, oxid_states, features_test)
 
         for atomIndex, _ in enumerate(features_true):
             features_test_site = features_test.get_site_features(atomIndex)
@@ -104,7 +108,7 @@ def test_firstDegreeFeatures(features_true_list, testData):
 def test_nnnFeatures(features_true_list, testData):    
     for Tdatum in testData:
         features_true = features_true_list[Tdatum['material_id']]
-        features_test = featurize(Tdatum['structure'])
+        features_test = CoordinationFeatures.from_structure(Tdatum['structure'])
 
         for atomIndex, _ in enumerate(features_true):
             features_test_site = features_test.get_site_features(atomIndex)
