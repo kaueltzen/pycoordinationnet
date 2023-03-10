@@ -273,6 +273,8 @@ class ModelLigandsTransformer(torch.nn.Module):
         self.embedding_cls2         = torch.nn.Embedding(1, edim)
         self.embedding_element      = ElementEmbedder(edim, from_pretrained=True)
         self.embedding_ligands      = ElementEmbedder(edim, from_pretrained=True)
+        # TODO:
+        # Include distances between cations and ligands (stored in CoordinationFeatures.distances)
         self.rbf_angles             = RBFLayer(0, 180, edim)
 
     def forward(self, x):
