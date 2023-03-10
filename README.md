@@ -97,6 +97,15 @@ model_config = CoordinationNetConfig(
     ce_neighbors          = False,
 )
 ```
+If a value is not specified, it will be set to *False* by default. Hence, the above configuration is equivalen to
+```python
+model_config = CoordinationNetConfig(
+    site_features         = True,
+    site_features_ces     = True,
+    site_features_oxid    = True,
+    site_features_csms    = True,
+)
+```
 
 The following code creates a new model instance with additional keyword arguments:
 ```python
