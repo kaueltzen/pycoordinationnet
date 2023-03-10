@@ -78,6 +78,8 @@ model.save('model.dill')
 model = CoordinationNet.load('model.dill')
 ```
 
+---
+---
 ### Advanced model initialization
 CoordinationNet has a modular structure so that individual components can be included or excluded from the model. Which model components are included is controlled using the *CoordinationNetConfig*. The following shows the default values for CoordinationNet:
 ```python
@@ -126,6 +128,8 @@ model = CoordinationNet(
 ```
 All keyword arguments correspond to default values and don't have to be specified unless changed.
 
+---
+---
 ## Coordination Features
 
 This packages uses *pymatgen* to compute coordination environments, their distances and angles. The output is such that it can be used as features for machine learning models.
