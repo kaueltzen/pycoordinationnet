@@ -39,7 +39,7 @@ from coordinationnet import CoordinationFeaturesData
 
 data = CoordinationFeaturesData(structures, y = targets, verbose = True)
 ```
-Note that *y* (i.e. the target values) is optional and can be left empty if the network is not trained and only used for making predictions.
+Note that *y* (i.e. the target values) is optional and can be left empty if the network is not trained and only used for making predictions on this data.
 
 ### Run cross-validation
 CoordinationNet implements a cross-validation method that can be easily used:
