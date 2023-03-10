@@ -151,28 +151,27 @@ from coordinationnet import CoordinationFeatures
 features = CoordinationFeatures.from_structure(structure)
 ```
 
-The *features* object is a dict object with as many items as there are atoms in the material. The items can be accessed with the atom/site index. Each item contains the oxidation state of the atom (*oxidation*), the local environments (*ce*), the nearest neighbor distances (*distances*), the distances to neighboring coordination environments (*ce_distances*), and the angles between coordination environments (*ce_angles*). Note that complex strategies can return multiple local environments for each site.
+The *features* object contains information about the oxidation state of sites (*oxidation*), the local environments (*ce*), the nearest neighbor distances (*distances*), the distances to neighboring coordination environments (*ce_distances*), and the angles between coordination environments (*ce_angles*). Note that a site may have multiple local environments.
+
+### Elements, oxidations, ions
+
+The *sites* substructure contains basic information about each site, including elements, oxidation states, and the type of ion. For instance, the oxidation states can be accessed using:
+```python
+>>> features.sites.oxidations
+[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2]
+```
+The list contains the oxidation states for all 160 sites in the material.
 
 ### Coordination environments
 
-The coordination environment of the first site (isite = 0) is accessed as follows:
+The *ces* substructure contains all coordination environments of the material. The first set of environments can be accessed using:
 ```python
->>> features.get_site_features(0)['ce']
-[{'ce_symbol': 'C:8', 'ce_fraction': 1.0, 'csm': 2.217881949143581, 'permutation': [2, 4, 0, 1, 7, 5, 3, 6]}]
+>>> features.ces[0]
+{'site': 0, 'ce_symbols': ['C:8'], 'ce_fractions': [1.0], 'csms': [2.217881949143581], 'permutations': [[2, 4, 0, 1, 7, 5, 3, 6]]}
 ```
-The *ce_symbol* specifies the symbol of the coordination environment (*ce*) as defined in the supplementary material of *Waroquiers et al. 2020* [1]. In this example we have *C:8* which refers to a cube where the central site has 8 neighbors. Each coordination environment is attributed a fraction given by the *ce_fraction* item. Since we have only a single coordination environment in this example, we have a *ce_fraction* of one. The Continuous Symmetry Measure (*CSM*) specifies the distance of the coordination environment to the perfect model environment (given by the *csm* item) [2]. The CSM value ranges between zero and 100, where a value of zero represents a perfect match. To compute the similarity of the coordination environment, all possible permutations of neighboring sites must be tested. The permutation with the minimal CSM is given by the *permutation* item.
+We see that this set of environments belongs to site 0. The *ce_symbols* item lists the symbol of the coordination environments (*ce*) as defined in the supplementary material of *Waroquiers et al. 2020* [1]. In this example we have *C:8* which refers to a cube where the central site has 8 neighbors. Each coordination environment is attributed a fraction given by the *ce_fractions* item. Since we have only a single coordination environment in this example, the *ce_fractions* item contains a single value of one. The Continuous Symmetry Measure (*CSM*) specifies the distance of the coordination environment to the perfect model environment (given by the *csms* item) [2]. The CSM value ranges between zero and 100, where a value of zero represents a perfect match. To compute the similarity of the coordination environment, all possible permutations of neighboring sites must be tested. The permutation with the minimal CSM is given by the *permutation* item.
 
-Note that features are only computed for cations, because they form the centers of coordination environments:
-```python
->>> features.get_site_features(63)['ion']
-'cation'
->>> features.get_site_features(63).keys()
-dict_keys(['oxidation', 'ion', 'element', 'coordinates', 'distances', 'ce', 'ce_distances', 'ce_angles'])
->>> features.get_site_features(64)['ion']
-'anion'
->>> features.get_site_features(64).keys()
-dict_keys(['oxidation', 'ion', 'element', 'coordinates'])
-```
+Note that coordination environments are only computed for cations, because they form the centers of coordination environments.
 
 ### Distances and angles
 
