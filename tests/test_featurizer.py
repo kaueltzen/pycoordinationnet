@@ -75,90 +75,49 @@ def features_true_list():
 
 ## -----------------------------------------------------------------------------
 
-def test_firstDegreeFeatures(features_true_list, testData):
-    for Tdatum in testData:
-        features_true = features_true_list[Tdatum['material_id']]
-
-        features_test = CoordinationFeatures()
-
-        structure_connectivity, oxid_states = analyze_environment(Tdatum['structure'], 'simple', [AdditionalConditions.ONLY_ANION_CATION_BONDS])
-        features_test = compute_features_first_degree(structure_connectivity, oxid_states, features_test)
-
-        for atomIndex, _ in enumerate(features_true):
-            features_test_site = features_test.get_site_features(atomIndex)
-
-            assert(features_true[atomIndex]['oxidation'] == features_test_site['oxidation'])
-            assert(features_true[atomIndex]['element'  ] == features_test_site['element'])
-            np.testing.assert_allclose(features_true[atomIndex]['coordinates'], features_test_site['coordinates'])
-            assert(features_true[atomIndex]['ion'] == features_test_site['ion'])
-
-            if features_true[atomIndex]['ion'] == 'cation':
-                assert(features_true[atomIndex]['ce'] == features_test_site['ce'])
-                print('true distances:', features_true[atomIndex]['distances'])
-                print('test distances:', features_test_site['distances'])
-                for k, neighbor in enumerate(features_true[atomIndex]['distances']):
-                    # Test neighbor elements
-                    assert(neighbor[0] == features_test_site['distances'][k][0])
-                    assert(neighbor[1] == features_test_site['distances'][k][1])
-                    # Test neighbor distance
-                    assert(pytest.approx(neighbor[2], 0.001) == features_test_site['distances'][k][2])
-
-## -----------------------------------------------------------------------------
-
-def test_nnnFeatures(features_true_list, testData):    
+def test_features(features_true_list, testData):
     for Tdatum in testData:
         features_true = features_true_list[Tdatum['material_id']]
         features_test = CoordinationFeatures.from_structure(Tdatum['structure'])
 
-        for atomIndex, _ in enumerate(features_true):
-            features_test_site = features_test.get_site_features(atomIndex)
+        # Test sites features
+        sites_true = features_true.sites
+        sites_test = features_test.sites
 
-            # Make sure the atom order is preserved
-            assert (features_true[atomIndex]['coordinates'] == features_test_site['coordinates']).all()
+        assert (np.array(sites_true.elements  ) == np.array(sites_test.elements  )).all()
+        assert (np.array(sites_true.oxidations) == np.array(sites_test.oxidations)).all()
+        assert (np.array(sites_true.ions      ) == np.array(sites_test.ions      )).all()
 
-            if features_true[atomIndex]['ion'] == 'cation':
-                # The order of distances may vary
-                distances_true = []
-                distances_test = []
-                elements_true  = []
-                elements_test  = []
-                for p, nnn in enumerate(features_true[atomIndex]['ce_distances']):
-                    # Extract NNN distance
-                    distances_true.append(round(nnn[2], 3))
-                    distances_test.append(round(features_test_site['ce_distances'][p][2], 3))
-                    # Extract NNN element
-                    elements_true.append(nnn[1])
-                    elements_test.append(features_test_site['ce_distances'][p][1])
+        # Test distances
+        distances_true = {}
+        distances_test = {}
+        # Fill dictionaries
+        for item in features_true.distances:
+            key = (item['site'], item['site_to'])
+            distances_true[key] = item['distance']
+        for item in features_test.distances:
+            key = (item['site'], item['site_to'])
+            distances_test[key] = item['distance']
+        # Compare dictionaries
+        assert len(distances_true) == len(distances_test)
+        for item in features_test.distances:
+            key = (item['site'], item['site_to'])
+            assert key in distances_true
+            if key in distances_true:
+                assert (distances_true[key] - item['distance']) < 1e-4
 
-                assert(np.all(np.sort(distances_true) == np.sort(distances_test)))
-                assert(np.all(np.sort( elements_true) == np.sort( elements_test)))
-
-                types_true    = []
-                types_test    = []
-                angles_true   = []
-                angles_test   = []
-                elements_true = []
-                elements_test = []
-                for connectivity in features_true[atomIndex]['ce_angles']:
-                    # Check connectivity type (cornder/edge/face/noConnection)
-                    types_true.append(connectivity[0])
-
-                    for connectivityIndex in range(1, len(connectivity)):
-                        # Extract angles
-                        angles_true.append(round(connectivity[connectivityIndex][3], 3))
-                        # Extract elements
-                        elements_true.append(connectivity[connectivityIndex][2])
-
-                for connectivity in features_test_site['ce_angles']:
-                    # Check connectivity type (cornder/edge/face/noConnection)
-                    types_test.append(connectivity[0])
-
-                    for connectivityIndex in range(1, len(connectivity)):
-                        # Extract angles
-                        angles_test.append(round(connectivity[connectivityIndex][3], 3))
-                        # Extract elements
-                        elements_test.append(connectivity[connectivityIndex][2])
-
-                assert(np.all(np.sort(   types_true) == np.sort(   types_test)))
-                assert(np.all(np.sort(  angles_true) == np.sort(  angles_test)))
-                assert(np.all(np.sort(elements_true) == np.sort(elements_test)))
+        # Test ce neighbors
+        ce_neighbors_true = {}
+        ce_neighbors_test = {}
+        # Fill dictionaries
+        for item in features_true.ce_neighbors:
+            key = (item['site'], item['site_to']) + (item['connectivity'],) + tuple(item['ligand_indices']) + tuple(np.array(item['angles']).round(2))
+            ce_neighbors_true[key] = item
+        for item in features_test.ce_neighbors:
+            key = (item['site'], item['site_to']) + (item['connectivity'],) + tuple(item['ligand_indices']) + tuple(np.array(item['angles']).round(2))
+            ce_neighbors_test[key] = item
+        # Compare dictionaries
+        assert len(ce_neighbors_true) == len(ce_neighbors_test)
+        for item in features_test.ce_neighbors:
+            key = (item['site'], item['site_to']) + (item['connectivity'],) + tuple(item['ligand_indices']) + tuple(np.array(item['angles']).round(2))
+            assert key in ce_neighbors_true
