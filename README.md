@@ -186,19 +186,12 @@ Note that coordination environments are only computed for cations, because they 
 
 ### Neighboring coordination environments
 
-The *ce_distance* item contains the distances to neighboring coordination environments, always measured from the center atoms.
+The *ce_neighbors* item contains a list of all neighboring coordination environments. Note that neighbors are computed by considering symmetries stemming from the periodic boundary conditions. The first item can be accessed using:
 ```python
-[('Er', 'Er', 3.781941127654686), ('Er', 'Er', 3.781941127654686), ('Er', 'Er', 3.781941127654686), ('Er', 'Er', 3.781941127654686), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.087942), ('Er', 'Ga', 3.452424111288328), ('Er', 'Ga', 3.452424111288328), ('Er', 'Ga', 3.087942), ('Er', 'Ga', 3.781941127654686), ('Er', 'Ga', 3.452424111288328), ('Er', 'Ga', 3.452424111288328)]
+>>> features.ce_neighbors[0]
+{'site': 0, 'site_to': 2, 'distance': 3.781941127654686, 'connectivity': 'edge', 'ligand_indices': [93, 94], 'angles': [104.76176533545028, 104.76176533545029]}
 ```
-The first two entries of each tuple contain the elements of the center atoms. The third entry is the distance between center atoms.
-
-Similarly, the *ce_angles* item contains the angle between neighboring coordination environments.
-```python
-[['edge', ('Er', 'O', 'Er', 104.76176533545028), ('Er', 'O', 'Er', 104.76176533545029)], ['edge', ('Er', 'O', 'Er', 104.76176533545029), ('Er', 'O', 'Er', 104.76176533545028)], ['edge', ('Er', 'O', 'Er', 104.76176533545026), ('Er', 'O', 'Er', 104.76176533545035)], ['edge', ('Er', 'O', 'Er', 104.76176533545026), ('Er', 'O', 'Er', 104.76176533545028)], ['corner', ('Er', 'O', 'Ga', 122.8127776876257)], ['corner', ('Er', 'O', 'Ga', 122.81277768762573)], ['corner', ('Er', 'O', 'Ga', 122.81277768762573)], ['edge', ('Er', 'O', 'Ga', 93.78531247833918), ('Er', 'O', 'Ga', 93.78531247833915)], ['edge', ('Er', 'O', 'Ga', 104.54130312850349), ('Er', 'O', 'Ga', 101.4103174150423)], ['edge', ('Er', 'O', 'Ga', 104.54130312850347), ('Er', 'O', 'Ga', 101.41031741504229)], ['edge', ('Er', 'O', 'Ga', 93.78531247833916), ('Er', 'O', 'Ga', 93.78531247833918)], ['corner', ('Er', 'O', 'Ga', 122.81277768762573)], ['edge', ('Er', 'O', 'Ga', 104.54130312850349), ('Er', 'O', 'Ga', 101.41031741504227)], ['edge', ('Er', 'O', 'Ga', 104.54130312850346), ('Er', 'O', 'Ga', 101.41031741504229)]]
-```
-Each tuple contains the three atom types along which the angle is measured. The second entry is the type of the ligand, while the first and the third are the center atoms of the coordination environments. The fourth entry is the angle at the ligand.
-
-Note that distances and angles are computed for all neighbors by considering symmetries stemming from the periodic boundary conditions.
+We see that it specifies the distance between sites 0 and 1, two cations that form the centers of two coordination environments. The environments are connected through an edge, hence it has two ligands. For both ligands, we also obtain the angle measured at the ligand.
 
 ### Encoded features
 
