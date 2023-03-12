@@ -1,4 +1,9 @@
 
+## Code from:
+## You, Yang, et al. "Large batch optimization for deep learning:
+## Training bert in 76 minutes." arXiv preprint arXiv:1904.00962 (2019).
+## ----------------------------------------------------------------------------
+
 import torch
 
 from torch.optim.optimizer import Optimizer
