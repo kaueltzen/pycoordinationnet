@@ -1,10 +1,25 @@
-
-#%% Retrieve oxides from materials project
-### ---------------------------------------------------------------------------
+## Copyright (C) 2023 Philipp Benner
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## ----------------------------------------------------------------------------
 
 import numpy as np
 
 from coordinationnet import mp_icsd_query, mp_icsd_clean
+
+#%% Retrieve oxides from materials project
+### ---------------------------------------------------------------------------
 
 mats = mp_icsd_query("Q0tUKnAE52sy7hVO", experimental_data = False)
 mats = mp_icsd_clean(mats)
