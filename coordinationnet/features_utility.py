@@ -76,7 +76,7 @@ def oxide_check(initStruc : Structure) -> tuple[bool, bool, bool, Structure]:
 
 ## -----------------------------------------------------------------------------
 
-def mp_icsd_query(MPID : str, experimental_data = True) -> str:
+def mp_icsd_query(MPID : str, experimental_data = True, properties = ['formation_energy_per_atom', 'e_above_hull']) -> str:
     '''
     Retrieves experimental (ICSD) crystallographic data through the Materials Project API.
     Currently queries for crystals which contain Oxide anions, are not theoretical, and have at least 2 elements.
@@ -114,9 +114,7 @@ def mp_icsd_query(MPID : str, experimental_data = True) -> str:
 
         data = mpr.query(
             criteria,
-            properties = [
-                'exp.tags', 'icsd_ids', 'formula', 'pretty_formula', 'structure',
-                'material_id', 'theoretical', 'formation_energy_per_atom', 'e_above_hull' ])
+            properties = ['material_id', 'exp.tags', 'icsd_ids', 'formula', 'pretty_formula', 'structure', 'theoretical' ])
 
     # Converts list to array, much faster to work with
     data = np.array(data)
