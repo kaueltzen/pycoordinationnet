@@ -114,7 +114,7 @@ def mp_icsd_query(MPID : str, experimental_data = True, properties = ['formation
 
         data = mpr.query(
             criteria,
-            properties = ['material_id', 'exp.tags', 'icsd_ids', 'formula', 'pretty_formula', 'structure', 'theoretical' ])
+            properties = ['material_id', 'exp.tags', 'icsd_ids', 'formula', 'pretty_formula', 'structure', 'theoretical' ] + properties)
 
     # Converts list to array, much faster to work with
     data = np.array(data)
