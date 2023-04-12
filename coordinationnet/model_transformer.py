@@ -19,7 +19,8 @@ import torch
 from .features_coding import NumOxidations, NumGeometries
 
 from .model_config    import DefaultCoordinationNetConfig
-from .model_layers    import ModelDense, ElementEmbedder, RBFLayer
+from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer
+
 
 ## ----------------------------------------------------------------------------
 
@@ -448,8 +449,12 @@ class ModelCoordinationNet(torch.nn.Module):
 
         print(f'{model_config}')
 
-        self.model_config = model_config
-
+        # The model config determines which components of the model
+        # are active
+        self.model_config              = model_config
+        # Optional scaler of model outputs (predictions)
+        self.scaler_outputs            = TorchStandardScaler(layers[-1])
+        # Optional model components
         self.transformer_composition   = None
         self.transformer_sites         = None
         self.transformer_site_features = None
@@ -518,6 +523,7 @@ class ModelCoordinationNet(torch.nn.Module):
 
         # Feed sum through final dense layer
         x = self.dense(x_input)
+        x = self.scaler_outputs.inverse_transform(x)
 
         return x
 

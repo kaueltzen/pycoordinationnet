@@ -17,15 +17,10 @@
 import torch
 import pytorch_lightning as pl
 
+from abc    import ABC, abstractmethod
 from typing import Optional
 
-from sklearn.model_selection import KFold
-
 from .model_optimizer        import Lamb
-from .model_config           import CoordinationNetConfig
-from .model_data             import CoordinationFeaturesData
-from .model_transformer      import ModelCoordinationNet
-from .model_transformer_data import CoordinationFeaturesLoader
 
 ## ----------------------------------------------------------------------------
 
@@ -35,25 +30,37 @@ logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 ## ----------------------------------------------------------------------------
 
 class LitMetricTracker(pl.callbacks.Callback):
-  def __init__(self):
-    self.val_error_batch   = []
-    self.val_error         = []
-    self.train_error_batch = []
-    self.train_error       = []
+    def __init__(self):
+        self.val_error_batch   = []
+        self.val_error         = []
+        self.train_error_batch = []
+        self.train_error       = []
+        self.test_y            = []
+        self.test_y_hat        = []
 
-  def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
-    self.train_error_batch.append(outputs['loss'].item())
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        self.train_error_batch.append(outputs['loss'].item())
 
-  def on_train_epoch_end(self, *args, **kwargs):
-    self.train_error.append(torch.mean(torch.tensor(self.train_error_batch)))
-    self.train_error_batch = []
+    def on_train_epoch_end(self, *args, **kwargs):
+        self.train_error.append(torch.mean(torch.tensor(self.train_error_batch)).item())
+        self.train_error_batch = []
 
-  def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-    self.val_error_batch.append(outputs['val_loss'].item())
+    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        self.val_error_batch.append(outputs['val_loss'].item())
 
-  def on_validation_epoch_end(self, trainer, pl_module):
-    self.val_error.append(torch.mean(torch.tensor(self.val_error_batch)))
-    self.val_error_batch = []
+    def on_validation_epoch_end(self, trainer, pl_module):
+        self.val_error.append(torch.mean(torch.tensor(self.val_error_batch)).item())
+        self.val_error_batch = []
+
+    def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        self.test_y    .append(outputs['y'    ].detach().cpu())
+        self.test_y_hat.append(outputs['y_hat'].detach().cpu())
+
+    @property
+    def test_predictions(self):
+        y     = torch.cat(self.test_y)
+        y_hat = torch.cat(self.test_y_hat)
+        return y, y_hat
 
 ## ----------------------------------------------------------------------------
 
@@ -126,24 +133,13 @@ class LitVerboseOptimizer(torch.optim.Optimizer):
 
 ## ----------------------------------------------------------------------------
 
-class LitCoordinationFeaturesData(pl.LightningDataModule):
-    def __init__(self, data : CoordinationFeaturesData, model_config : CoordinationNetConfig, n_splits = 1, val_size = 0.2, batch_size = 32, num_workers = 2, shuffle = True, random_state = 42):
+class LitDataset(pl.LightningDataModule, ABC):
+    def __init__(self, data, val_size = 0.2, batch_size = 32, num_workers = 2):
         super().__init__()
-        self.model_config = model_config
         self.num_workers  = num_workers
         self.val_size     = val_size
         self.batch_size   = batch_size
         self.data         = data
-        # Setup k-fold cross-validation if n_splits > 1
-        self.n_splits     = n_splits
-        if n_splits > 1:
-            self.splits   = list(KFold(n_splits, shuffle = shuffle, random_state = random_state).split(self.data.X, self.data.y))
-
-    # Custom method to set the fold for cross-validation
-    def setup_fold(self, k):
-        if self.n_splits < 2:
-            raise ValueError(f'k-fold cross-validation is not available, because n_splits is set to {self.n_splits}')
-        self.k = k
 
     # This function is called by lightning trainer class with
     # the corresponding stage option
@@ -151,31 +147,21 @@ class LitCoordinationFeaturesData(pl.LightningDataModule):
 
         # Assign train/val datasets for use in dataloaders
         if stage == 'fit' or stage == None:
-            # Check if we are using cross-validation
-            if self.n_splits > 1:
-                train_index, _ = self.splits[self.k]
-                self.data_train = torch.utils.data.Subset(self.data, train_index)
-            else:
-                self.data_train = self.data
             # Take a piece of the training data for validation
-            self.data_train, self.data_val = torch.utils.data.random_split(self.data_train, [1.0 - self.val_size, self.val_size])
+            self.data_train, self.data_val = torch.utils.data.random_split(self.data, [1.0 - self.val_size, self.val_size])
 
         # Assign test dataset for use in dataloader(s)
         if stage == 'test' or stage == None:
-            # Check if we are using cross-validation
-            if self.n_splits > 1:
-                _, test_index = self.splits[self.k]
-                self.data_test = torch.utils.data.Subset(self.data, test_index)
-            else:
-                self.data_test = self.data
+            self.data_test = self.data
 
         # Assign predict dataset for use in dataloader(s)
         if stage == 'predict' or stage == None:
             self.data_predict = self.data
 
     # Custom method to create a data loader
+    @abstractmethod
     def get_dataloader(self, data):
-        return CoordinationFeaturesLoader(data, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+        pass
 
     # The following functions are called by the trainer class to
     # obtain data loaders
@@ -193,26 +179,44 @@ class LitCoordinationFeaturesData(pl.LightningDataModule):
 
 ## ----------------------------------------------------------------------------
 
-class LitCoordinationNet(pl.LightningModule):
+class LitModel(pl.LightningModule):
     def __init__(self,
+                 # pytorch model class and loss function
+                 model, loss = torch.nn.L1Loss(),
+                 # Trainer options
+                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = 'auto',
+                 # Data options
+                 val_size = 0.1, batch_size = 128, num_workers = 2,
                  # Learning rate
                  lr = 1e-3, lr_groups = {},
                  # Weight decay
                  weight_decay = 0.0, weight_decay_groups = {},
                  # Other hyperparameters
-                 betas = (0.9, 0.999), factor = 0.8, patience = 5,
+                 betas = (0.9, 0.95), factor = 0.8,
                  # Optimizer and scheduler selection
                  scheduler = None, optimizer = 'Adam', optimizer_verbose = False, **kwargs):
         super().__init__()
         # Save all hyperparameters to `hparams` (e.g. lr)
         self.save_hyperparameters()
-        self.loss              = torch.nn.L1Loss()
-        self.train_loss        = []
-        self.val_loss          = []
         self.optimizer         = optimizer
         self.optimizer_verbose = optimizer_verbose
         self.scheduler         = scheduler
-        self.model             = ModelCoordinationNet(**kwargs)
+        self.model             = model(**kwargs)
+        self.loss              = loss
+
+        self.trainer_options = {
+            'patience_sd' : patience_sd,
+            'patience_es' : patience_es,
+            'max_epochs'  : max_epochs,
+            'accelerator' : accelerator,
+            'devices'     : devices,
+            'strategy'    : strategy,
+        }
+        self.data_options    = {
+            'val_size'    : val_size,
+            'batch_size'  : batch_size,
+            'num_workers' : num_workers,
+        }
     
     def configure_optimizers(self):
         # Get learning rates
@@ -280,46 +284,116 @@ class LitCoordinationNet(pl.LightningModule):
 
         return [optimizer], scheduler
 
-    def forward(self, x):
-        return self.model.forward(x)
+    def forward(self, x, **kwargs):
+        return self.model.forward(x, **kwargs)
 
     def training_step(self, batch, batch_index):
         """Train model on a single batch"""
         X_batch = batch[0]
         y_batch = batch[1]
-        y_hat   = self(X_batch)
-        loss    = self.loss(y_hat, y_batch)
-        self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        # Call the model
+        y_hat = self.model(X_batch)
+        loss  = self.loss(y_hat, y_batch)
+        # Send metrics to progress bar. We also don't want results
+        # logged at every step, but let the logger accumulate the
+        # results at the end of every epoch
+        self.log(f'train_loss', loss.item(), prog_bar=True, on_step=False, on_epoch=True)
+        # Return whatever we might need in callbacks. Lightning automtically minimizes
+        # the item called 'loss', which must be present in the returned dictionary
         return {'loss': loss}
 
     def validation_step(self, batch, batch_index):
         """Validate model on a single batch"""
         X_batch = batch[0]
         y_batch = batch[1]
-        y_hat   = self(X_batch)
-        loss    = self.loss(y_hat, y_batch)
-        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        # Call the model
+        y_hat = self.model(X_batch)
+        loss  = self.loss(y_hat, y_batch)
+        # Send metrics to progress bar. We also don't want results
+        # logged at every step, but let the logger accumulate the
+        # results at the end of every epoch
+        self.log('val_loss', loss.item(), prog_bar=True, on_step=False, on_epoch=True)
+        # Return whatever we might need in callbacks
         return {'val_loss': loss}
 
     def test_step(self, batch, batch_index):
         """Test model on a single batch"""
         X_batch = batch[0]
         y_batch = batch[1]
-        y_hat   = self(X_batch)
-        # Return predictions
-        return {'y': y_batch[:,0].detach().cpu(), 'y_hat': y_hat[:,0].detach().cpu()}
-
-    def test_epoch_end(self, test_step_outputs):
-        # Collect predictions from individual batches
-        y     = torch.tensor([])
-        y_hat = torch.tensor([])
-        for output in test_step_outputs:
-            y     = torch.cat((y    , output['y']))
-            y_hat = torch.cat((y_hat, output['y_hat']))
-        # Save predictions for evaluation
-        self.test_y     = y
-        self.test_y_hat = y_hat
+        # Call the model
+        y_hat = self.model(X_batch)
+        loss  = self.loss(y_hat, y_batch)
+        # Log whatever we want to aggregate later
+        self.log('test_loss', loss)
+        # Return whatever we might need in callbacks
+        return {'y': y_batch, 'y_hat': y_hat, 'test_loss': loss}
 
     def predict_step(self, batch, batch_index):
         """Prediction on a single batch"""
-        return self.forward(batch[0])
+        return self.model(batch[0])
+
+    def _setup_trainer_(self):
+        self.trainer_matric_tracker      = LitMetricTracker()
+        self.trainer_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'val_loss', patience = self.trainer_options['patience_es'])
+        self.trainer_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
+
+        # self.trainer is a pre-defined getter/setter in the LightningModule
+        self.trainer = pl.Trainer(
+            enable_checkpointing = True,
+            logger               = False,
+            enable_progress_bar  = True,
+            max_epochs           = self.trainer_options['max_epochs'],
+            accelerator          = self.trainer_options['accelerator'],
+            devices              = self.trainer_options['devices'],
+            strategy             = self.trainer_options['strategy'],
+            callbacks            = [LitProgressBar(), self.trainer_early_stopping, self.trainer_checkpoint_callback, self.trainer_matric_tracker])
+
+    def _train(self, data):
+
+        # We always need a new trainer for training the model
+        self._setup_trainer_()
+
+        # Train model on train data. The fit method returns just None
+        self.trainer.fit(self, data)
+
+        # Get best model
+        best_model = self.load_from_checkpoint(self.trainer_checkpoint_callback.best_model_path)
+        # Lightning removes all training related objects before
+        # saving the model. Recover all training components
+        best_model.trainer                     = self.trainer
+        best_model.trainer_matric_tracker      = self.trainer_matric_tracker
+        best_model.trainer_early_stopping      = self.trainer_early_stopping
+        best_model.trainer_checkpoint_callback = self.trainer_checkpoint_callback
+
+        stats = {
+            'best_val_error'  : self.trainer_checkpoint_callback.best_model_score.item(),
+            'train_error'     : self.trainer_matric_tracker.train_error,
+            'val_error'       : self.trainer_matric_tracker.val_error }
+
+        return best_model, stats
+
+    def _test(self, data):
+
+        # We always need a new trainer for testing the model
+        self._setup_trainer_()
+
+        # Train model on train data. The test method returns accumulated
+        # statistics sent to the logger
+        stats = self.trainer.test(self, data)
+
+        # There should only be one entry in stats
+        assert len(stats) == 1
+
+        # Get targets and predictions
+        y, y_hat = self.trainer_matric_tracker.test_predictions
+
+        return y, y_hat, stats[0]
+
+    def _predict(self, data):
+
+        # We always need a new trainer for testing the model
+        self._setup_trainer_()
+
+        # Train model on train data. The test method returns accumulated
+        # statistics sent to the logger
+        return torch.cat(self.trainer.predict(self, data))

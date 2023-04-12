@@ -167,23 +167,23 @@ class CoordinationFeatures(FancyString, MyMSONable):
         result = compute_features_nnn(structure_connectivity, result)
 
         if encode:
-            result = encode_features(result)
+            result = result.encode()
 
         return result
 
     def encode(self) -> 'CoordinationFeatures':
         if self._encoded:
             raise ValueError('Features are already encoded')
-        CoordinationFeatures = encode_features(self)
-        CoordinationFeatures._encoded = True
-        return CoordinationFeatures
+        features = encode_features(self)
+        features._encoded = True
+        return features
 
     def decode(self) -> 'CoordinationFeatures':
         if not self._encoded:
             raise ValueError('Features are already decoded')
-        CoordinationFeatures = decode_features(self)
-        CoordinationFeatures._encoded = False
-        return CoordinationFeatures
+        features = decode_features(self)
+        features._encoded = False
+        return features
 
     @property
     def encoded(self) -> int:

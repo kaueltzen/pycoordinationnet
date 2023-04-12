@@ -23,6 +23,25 @@ from .features_coding import NumElements
 
 ## ----------------------------------------------------------------------------
 
+class TorchStandardScaler(torch.nn.Module):
+
+    def __init__(self, dim):
+        super().__init__()
+        self.mean = torch.nn.Parameter(torch.tensor(dim*[0.0]), requires_grad=False)
+        self.std  = torch.nn.Parameter(torch.tensor(dim*[1.0]), requires_grad=False)
+
+    def fit(self, x):
+        self.mean = torch.nn.Parameter(x.mean(0, keepdim = False                  )       , requires_grad=False)
+        self.std  = torch.nn.Parameter(x.std (0, keepdim = False, unbiased = False) + 1e-8, requires_grad=False)
+
+    def transform(self, x):
+        return (x - self.mean) / self.std
+
+    def inverse_transform(self, x):
+        return x*self.std + self.mean
+
+## ----------------------------------------------------------------------------
+
 class ModelDense(torch.nn.Module):
     def __init__(self, ks, skip_connections=True, dropout=False, layernorm=False, batchnorm=False, batchnorm_momentum=0.1, batchnorm_out=False, activation=torch.nn.ELU(), activation_out=None, seed=None):
         super().__init__()

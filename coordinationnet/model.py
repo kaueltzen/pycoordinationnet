@@ -16,54 +16,58 @@
 
 import dill
 import torch
-import pytorch_lightning as pl
 
-from copy import deepcopy
+from copy                    import deepcopy
+from sklearn.model_selection import KFold
 
-from .model_data import CoordinationFeaturesData
-from .model_lit  import LitCoordinationNet, LitCoordinationFeaturesData, LitProgressBar, LitMetricTracker
+from .model_config           import CoordinationNetConfig
+from .model_data             import CoordinationFeaturesData
+from .model_transformer      import ModelCoordinationNet
+from .model_transformer_data import CoordinationFeaturesLoader
+from .model_lit              import LitModel, LitDataset
+
+## ----------------------------------------------------------------------------
+
+class LitCoordinationFeaturesData(LitDataset):
+    def __init__(self, data : CoordinationFeaturesData, model_config : CoordinationNetConfig, val_size = 0.2, batch_size = 32, num_workers = 2):
+        super().__init__(data, val_size = val_size, batch_size = batch_size, num_workers = num_workers)
+        self.model_config = model_config
+
+    # Custom method to create a data loader
+    def get_dataloader(self, data):
+        return CoordinationFeaturesLoader(data, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
 
 ## ----------------------------------------------------------------------------
 
 class CoordinationNet:
 
-    def __init__(self,
-            # Trainer options
-            patience = 100, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = None,
-            # Data options
-            val_size = 0.1, batch_size = 128, num_workers = 2,
-            # Model options
-            **kwargs):
+    def __init__(self, **kwargs):
 
-        self.lit_model           = LitCoordinationNet(**kwargs)
-        self.lit_trainer         = None
-        self.lit_trainer_options = {
-            'patience'    : patience,
-            'max_epochs'  : max_epochs,
-            'accelerator' : accelerator,
-            'devices'     : devices,
-            'strategy'    : strategy,
-        }
-        self.lit_data_options    = {
-            'val_size'    : val_size,
-            'batch_size'  : batch_size,
-            'num_workers' : num_workers,
-        }
+        self.lit_model = LitModel(ModelCoordinationNet, **kwargs)
 
-    def _setup_trainer_(self):
-        self.lit_matric_tracker      = LitMetricTracker()
-        self.lit_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'val_loss', patience = self.lit_trainer_options['patience'])
-        self.lit_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
+    def train(self, data : CoordinationFeaturesData):
 
-        self.lit_trainer = pl.Trainer(
-            enable_checkpointing = True,
-            enable_progress_bar  = True,
-            logger               = False,
-            max_epochs           = self.lit_trainer_options['max_epochs'],
-            accelerator          = self.lit_trainer_options['accelerator'],
-            devices              = self.lit_trainer_options['devices'],
-            strategy             = self.lit_trainer_options['strategy'],
-            callbacks            = [LitProgressBar(), self.lit_early_stopping, self.lit_checkpoint_callback, self.lit_matric_tracker])
+        # Fit scaler to target values. The scaling of model outputs is done
+        # by the model itself
+        self.lit_model.model.scaler_outputs.fit(data.y)
+
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_model.data_options)
+
+        self.lit_model, stats = self.lit_model._train(data)
+
+        return stats
+
+    def test(self, data : CoordinationFeaturesData):
+
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_model.data_options)
+
+        return self.lit_model._test(data)
+
+    def predict(self, data : CoordinationFeaturesData):
+
+        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_model.data_options)
+
+        return self.lit_model._predict(data)
 
     def cross_validation(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
 
@@ -73,31 +77,26 @@ class CoordinationNet:
         if n_splits < 2:
             raise ValueError(f'k-fold cross-validation requires at least one train/test split by setting n_splits=2 or more, got n_splits={n_splits}')
 
-        data  = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, n_splits = n_splits, shuffle = shuffle, random_state = random_state, **self.lit_data_options)
-
-        return self._cross_validation(data)
-
-    def _cross_validation(self, data : LitCoordinationFeaturesData):
-
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
 
-        initial_model = self.lit_model.model
+        initial_model = self.lit_model
 
-        for fold in range(data.n_splits):
+        for fold, (index_train, index_test) in enumerate(KFold(n_splits, shuffle = shuffle, random_state = random_state).split(data)):
 
-            print(f'Training fold {fold+1}/{data.n_splits}...')
-            data.setup_fold(fold)
+            print(f'Training fold {fold+1}/{n_splits}...')
+
+            data_train = data.subset(index_train)
+            data_test  = data.subset(index_test )
 
             # Clone model
-            self.lit_model.model = deepcopy(initial_model)
+            self.lit_model = deepcopy(initial_model)
 
             # Train model
-            best_val_score = self._train(data)['best_val_error']
+            best_val_score = self.train(data_train)['best_val_error']
 
             # Test model
-            self.lit_trainer.test(self.lit_model, data)
-            test_y, test_y_hat = self.lit_model.test_y, self.lit_model.test_y_hat
+            test_y, test_y_hat, _ = self.test(data_test)
 
             # Print score
             print(f'Best validation score: {best_val_score}')
@@ -106,49 +105,13 @@ class CoordinationNet:
             y_hat = torch.cat((y_hat, test_y_hat))
             y     = torch.cat((y    , test_y    ))
 
+        # Reset model
+        self.lit_model = initial_model
+
         # Compute final test score
         test_loss = self.lit_model.loss(y_hat, y).item()
 
         return test_loss, y, y_hat
-
-    def train(self, data : CoordinationFeaturesData):
-
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
-
-        return self._train(data)
-
-    def _train(self, data : LitCoordinationFeaturesData):
-
-        # We always need a new trainer for training the model
-        self._setup_trainer_()
-
-        # Train model on train data and use validation data for early stopping
-        self.lit_trainer.fit(self.lit_model, data)
-
-        # Get best model
-        self.lit_model = self.lit_model.load_from_checkpoint(self.lit_checkpoint_callback.best_model_path)
-
-        result = {
-            'best_val_error': self.lit_checkpoint_callback.best_model_score.item(),
-            'train_error'   : torch.stack(self.lit_matric_tracker.train_error).tolist(),
-            'val_error'     : torch.stack(self.lit_matric_tracker.val_error  ).tolist() }
-
-        return result
-
-    def predict(self, data : CoordinationFeaturesData):
-
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_data_options)
-
-        return self._predict(data)
-
-    def _predict(self, data : LitCoordinationFeaturesData):
-
-        if self.lit_trainer is None:
-            self._setup_trainer_()
-
-        y_hat_batched = self.lit_trainer.predict(self.lit_model, data)
-
-        return torch.cat(y_hat_batched, dim=0)
 
     @classmethod
     def load(cls, filename : str) -> 'CoordinationNet':

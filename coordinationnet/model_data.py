@@ -16,6 +16,7 @@
 
 import dill
 import torch
+import numpy as np
 
 from typing import Any
 from pymatgen.core.structure import Structure
@@ -28,8 +29,8 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
 
     def __init__(self, X : list[Any], y = None, verbose = False) -> None:
 
-        if not type(X) == list:
-            raise ValueError(f'X must be of type list, but got type {type(X)}')
+        if not (isinstance(X, list) or isinstance(X, np.ndarray)):
+            raise ValueError(f'X must be of type list or numpy array, but got type {type(X)}')
 
         if y is None:
             self.y = len(X)*[None]
@@ -39,9 +40,9 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
             else:
                 self.y = torch.tensor(y)
 
-        self.X = X
+        self.X = np.array(X)
 
-        for i, item in enumerate(X):
+        for i, item in enumerate(self.X):
             if   isinstance(item, Structure):
                 if verbose:
                     print(f'Featurizing structure {i+1}/{len(X)}')
@@ -60,6 +61,10 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
     def __getitem__(self, index):
         return self.X[index], self.y[index]
 
+    def subset(self, index):
+        X, y = self[index]
+        return CoordinationFeaturesData(X, y = y)
+
     @classmethod
     def load(cls, filename : str) -> 'CoordinationFeaturesData':
 
@@ -68,6 +73,10 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
 
         if not isinstance(data, cls):
             raise ValueError(f'file {filename} contains incorrect data class {type(data)}')
+
+        # For backward compatibility
+        if isinstance(data.X, list):
+            data.X = np.array(data.X)
 
         return data
 
