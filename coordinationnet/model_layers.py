@@ -27,6 +27,10 @@ class TorchStandardScaler(torch.nn.Module):
 
     def __init__(self, dim):
         super().__init__()
+        # Always use requires_grad=False, since we do not want to update
+        # parameters during training. However, we must store mean and standard
+        # deviations in a Parameter module, so that both get automatically
+        # pushed to GPU when required
         self.mean = torch.nn.Parameter(torch.tensor(dim*[0.0]), requires_grad=False)
         self.std  = torch.nn.Parameter(torch.tensor(dim*[1.0]), requires_grad=False)
 
