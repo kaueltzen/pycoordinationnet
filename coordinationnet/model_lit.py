@@ -184,7 +184,7 @@ class LitModel(pl.LightningModule):
                  # pytorch model class and loss function
                  model, loss = torch.nn.L1Loss(),
                  # Trainer options
-                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = 'auto',
+                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = 'auto', default_root_dir = 'checkpoints',
                  # Data options
                  val_size = 0.1, batch_size = 128, num_workers = 2,
                  # Learning rate
@@ -205,12 +205,13 @@ class LitModel(pl.LightningModule):
         self.loss              = loss
 
         self.trainer_options = {
-            'patience_sd' : patience_sd,
-            'patience_es' : patience_es,
-            'max_epochs'  : max_epochs,
-            'accelerator' : accelerator,
-            'devices'     : devices,
-            'strategy'    : strategy,
+            'patience_sd'      : patience_sd,
+            'patience_es'      : patience_es,
+            'max_epochs'       : max_epochs,
+            'accelerator'      : accelerator,
+            'devices'          : devices,
+            'strategy'         : strategy,
+            'default_root_dir' : default_root_dir,
         }
         self.data_options    = {
             'val_size'    : val_size,
@@ -346,6 +347,7 @@ class LitModel(pl.LightningModule):
             accelerator          = self.trainer_options['accelerator'],
             devices              = self.trainer_options['devices'],
             strategy             = self.trainer_options['strategy'],
+            default_root_dir     = self.trainer_options['default_root_dir'],
             callbacks            = [LitProgressBar(), self.trainer_early_stopping, self.trainer_checkpoint_callback, self.trainer_matric_tracker])
 
     def _train(self, data):
