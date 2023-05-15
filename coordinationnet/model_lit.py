@@ -14,8 +14,10 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ## ----------------------------------------------------------------------------
 
+import shutil
 import torch
 import pytorch_lightning as pl
+import os
 
 from abc    import ABC, abstractmethod
 from typing import Optional
@@ -337,6 +339,9 @@ class LitModel(pl.LightningModule):
         self.trainer_matric_tracker      = LitMetricTracker()
         self.trainer_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'train_loss', patience = self.trainer_options['patience_es'])
         self.trainer_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
+
+        if os.path.exists(self.trainer_options['default_root_dir']):
+            shutil.rmtree(self.trainer_options['default_root_dir'])
 
         # self.trainer is a pre-defined getter/setter in the LightningModule
         self.trainer = pl.Trainer(
