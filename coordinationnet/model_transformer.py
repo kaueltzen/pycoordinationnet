@@ -117,7 +117,7 @@ class ModelSitesTransformer(torch.nn.Module):
 class ModelSiteLigandsTransformer(torch.nn.Module):
     def __init__(self,
             # Encoder options
-            edim, transformer = False, angles = True, nheads = 4, nencoders = 4, dim_feedforward = 2048, dropout_transformer = 0.1,
+            edim, nheads = 4, nencoders = 4, dim_feedforward = 2048, dropout_transformer = 0.1,
             # Dense network options
             activation = torch.nn.ELU(), **kwargs):
         super().__init__()
@@ -130,50 +130,40 @@ class ModelSiteLigandsTransformer(torch.nn.Module):
             activation      = activation,
             dropout         = dropout_transformer)
 
-        self.transformer       = None
-        self.rbf_angles        = None
+        self.transformer       = torch.nn.TransformerEncoder(encoder_layer, nencoders)
         self.embedding_cls     = torch.nn.Embedding(1, edim)
         self.embedding_element = ElementEmbedder(edim, from_pretrained=True)
+        self.embedding_ligelem = ElementEmbedder(edim, from_pretrained=True)
+        self.embedding_ligoxid = torch.nn.Embedding(NumOxidations+1, edim)
+        # TODO:
+        # Include distances between cations and ligands (stored in CoordinationFeatures.distances)
+        self.rbf_angles        = RBFLayer(0, 180, edim)
 
-        if transformer:
-            self.transformer   = torch.nn.TransformerEncoder(encoder_layer, nencoders)
-
-        if angles:
-            self.rbf_angles    = RBFLayer(0, 180, edim)
-
-    def forward_element(self, x_elements):
-        x = self.embedding_element(x_elements)
-        x = torch.sum(x, dim=1)
-
-        return x[:,None,:]
-
-    def forward(self, x_ligands):
-        # Combine required features
+    def forward(self, x):
+        s = x.summation
+        # Sum up the two element columns
+        y = self.embedding_element(x.elements).sum(dim=1, keepdim=True)
+        # Apply transformer to full data
         x = torch.cat((
-                self.embedding_element(x_ligands.ligands),
-                self.forward_element  (x_ligands.elements)),
+                self.embedding_cls    (x.cls),
+                self.embedding_ligelem(x.ligelem),
+                self.embedding_ligoxid(x.ligoxid),
+                self.rbf_angles       (x.angles[:,:,None]),
+                # Attach sum of element embeddings
+                y),
                 dim=1)
-        # Add optional features
-        if self.rbf_angles is not None:
-            x = torch.cat((self.rbf_angles(x_ligands.angles[:,None,:]), x), dim=1)
         # Dimension of x is now:
         # (batch, sequence, edim)
-        if self.transformer is not None:
-            x = torch.cat(
-                (self.embedding_cls(x_ligands.cls), x),
-                dim=1)
-            x = self.transformer(x)
-            # Follow the BERT architecture and extract only the
-            # first sequence element (cls) after applying the transformer
-            x = x[:,0,:]
-        else:
-            x = x.sum(dim=1)
+        x = self.transformer(x)
+        # Follow the BERT architecture and extract only the
+        # first sequence element (cls) after applying the transformer
+        x = x[:,0,:]
         # Dimension of x is now:
         # (batch, edim)
-        # Each CE-pair has multiple ligands. We sum over all ligands
-        # for a given CE-pair
-        x = x_ligands.summation.T @ x
-
+        # Each material has multiple sites, we have to sum over all entries
+        # that belong to the same material. The batch size then corresponds
+        # to the number of materials in the batch
+        x = s.T @ x
         return x
 
 ## ----------------------------------------------------------------------------
@@ -284,31 +274,25 @@ class ModelLigandsTransformer(torch.nn.Module):
             activation      = activation,
             dropout         = dropout_transformer)
 
-        self.transformer_element    = torch.nn.TransformerEncoder(encoder_layer, nencoders)
-        self.transformer            = torch.nn.TransformerEncoder(encoder_layer, nencoders)
-        self.embedding_cls1         = torch.nn.Embedding(1, edim)
-        self.embedding_cls2         = torch.nn.Embedding(1, edim)
-        self.embedding_element      = ElementEmbedder(edim, from_pretrained=True)
-        self.embedding_ligands      = ElementEmbedder(edim, from_pretrained=True)
+        self.transformer       = torch.nn.TransformerEncoder(encoder_layer, nencoders)
+        self.embedding_cls     = torch.nn.Embedding(1, edim)
+        self.embedding_element = ElementEmbedder(edim, from_pretrained=True)
+        self.embedding_ligands = ElementEmbedder(edim, from_pretrained=True)
         # TODO:
         # Include distances between cations and ligands (stored in CoordinationFeatures.distances)
-        self.rbf_angles             = RBFLayer(0, 180, edim)
+        self.rbf_angles        = RBFLayer(0, 180, edim)
 
     def forward(self, x):
         s = x.summation
-        # Apply element transformer
-        y = torch.cat((
-                self.embedding_cls1   (x.cls),
-                self.embedding_element(x.elements)),
-                dim=1)
-        y = self.transformer_element(y)
+        # Sum up the two element columns
+        y = self.embedding_element(x.elements).sum(dim=1, keepdim=True)
         # Apply transformer to full data
         x = torch.cat((
-                self.embedding_cls2        (x.cls),
-                self.embedding_ligands     (x.ligands),
-                self.rbf_angles            (x.angles[:,:,None]),
+                self.embedding_cls    (x.cls),
+                self.embedding_ligands(x.ligands),
+                self.rbf_angles       (x.angles[:,:,None]),
                 # Attach CLS result from previous transformer
-                y[:,0:1,:]),
+                y),
                 dim=1)
         # Dimension of x is now:
         # (batch, sequence, edim)

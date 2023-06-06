@@ -415,7 +415,8 @@ class BatchLigandSites(Batch):
         # Allocate batch data
         self.cls      = torch.zeros((m, 1), dtype=torch.int)
         self.elements = torch.zeros((m, 2), dtype=torch.int)
-        self.ligands  = torch.zeros((m, 1), dtype=torch.int)
+        self.ligelem  = torch.zeros((m, 1), dtype=torch.int)
+        self.ligoxid  = torch.zeros((m, 1), dtype=torch.int)
         self.angles   = torch.zeros((m, 1), dtype=torch.float)
         # The summation matrix allows to reduce a batch of ligands
         # to a batch of sites across several materials
@@ -430,10 +431,12 @@ class BatchLigandSites(Batch):
             for nb in features.ce_neighbors:
                 l = len(nb['ligand_indices'])
                 if l > 0:
-                    self.elements[i:(i+l), 0] = nb['site']
-                    self.elements[i:(i+l), 1] = nb['site_to']
-                    self.ligands [i:(i+l), 0] = torch.tensor(nb['ligand_indices'], dtype=torch.int)
-                    self.angles  [i:(i+l), 0] = torch.tensor(nb['angles']        , dtype=torch.float)
+                    self.elements[i:(i+l), 0] = features.sites.elements[nb['site'   ]]
+                    self.elements[i:(i+l), 1] = features.sites.elements[nb['site_to']]
+                    for j, k in enumerate(nb['ligand_indices']):
+                        self.ligelem[i+j, 0] = features.sites.elements  [k]
+                        self.ligoxid[i+j, 0] = features.sites.oxidations[k]
+                        self.angles [i:j, 0] = nb['angles'][j]
                     i += l
 
     @classmethod
@@ -621,9 +624,9 @@ class BatchCeNeighbors(Batch):
         # Allocate batch data
         self.cls          = torch.zeros((m, 1), dtype=torch.int)
         self.elements     = torch.zeros((m, 2), dtype=torch.int)
+        self.oxidation    = torch.zeros((m, 2), dtype=torch.int)
         self.distances    = torch.zeros((m, 1), dtype=torch.float)
         self.connectivity = torch.zeros((m, 1), dtype=torch.int)
-        self.ce_index     = torch.zeros((m, 2), dtype=torch.long)
         self.summation    = self.__compute_s__(cofe_list, m)
 
         # Extract data from features objects
@@ -635,10 +638,10 @@ class BatchCeNeighbors(Batch):
             for i, nb in enumerate(features.ce_neighbors):
                 self.elements    [(offset+i), 0] = features.sites.elements[nb['site'   ]]
                 self.elements    [(offset+i), 1] = features.sites.elements[nb['site_to']]
+                self.oxidation   [(offset+i), 0] = features.sites.elements[nb['site'   ]]
+                self.oxidation   [(offset+i), 1] = features.sites.elements[nb['site_to']]
                 self.connectivity[(offset+i), 0] = nb['connectivity']
                 self.distances   [(offset+i), 0] = nb['distance']
-                self.ce_index    [(offset+i), 0] = site_features_ces.index[ (i_mat, nb['site'   ]) ]
-                self.ce_index    [(offset+i), 1] = site_features_ces.index[ (i_mat, nb['site_to']) ]
 
             offset += len(features.ce_neighbors)
 

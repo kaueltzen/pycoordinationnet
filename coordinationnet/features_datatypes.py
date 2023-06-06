@@ -31,7 +31,7 @@ class MyMSONable(MSONable):
         return dumpfn(self.as_dict(), filename)
 
     @classmethod
-    def load(self, filename):
+    def load(cls, filename):
         return loadfn(filename)
 
 ## -----------------------------------------------------------------------------
@@ -105,6 +105,20 @@ class CoordinationEnvironments(list, MyMSONable):
             'permutations' : permutations
         })
 
+    def _construct_index(self):
+        self._index = {}
+        for j, item in enumerate(self):
+            self._index[item['site']] = j
+
+    def get_site_ces(self, site):
+        if not hasattr(self, '_index'):
+            self._construct_index()
+
+        if site in self._index:
+            return self[self._index[site]]
+        else:
+            return None
+
 ## -----------------------------------------------------------------------------
 
 class CeNeighbors(list, MyMSONable):
@@ -122,18 +136,28 @@ class CeNeighbors(list, MyMSONable):
             'angles'         : angles
         })
 
-
 ## -----------------------------------------------------------------------------
 
 class CoordinationFeatures(FancyString, MyMSONable):
 
     def __init__(self, sites = None, distances = None, ces = None, ce_neighbors = None, encoded = False) -> None:
         super().__init__()
+
+        if not isinstance(sites, Sites):
+            sites = Sites(sites=sites)
+        if not isinstance(distances, Distances):
+            distances = Distances(distances=distances)
+        if not isinstance(distances, CoordinationEnvironments):
+            ces = CoordinationEnvironments(ces=ces)
+        if not isinstance(ce_neighbors, CeNeighbors):
+            ce_neighbors = CeNeighbors(ce_neighbors=ce_neighbors)
+
         self.sites        = sites        if sites        else Sites()
         self.distances    = distances    if distances    else Distances()
         self.ces          = ces          if ces          else CoordinationEnvironments()
         self.ce_neighbors = ce_neighbors if ce_neighbors else CeNeighbors()
         self._encoded     = encoded
+
 
     @classmethod
     def from_structure(cls, structure : Structure, env_strategy = 'simple', additional_conditions = [AdditionalConditions.ONLY_ANION_CATION_BONDS], encode = False) -> dict:
