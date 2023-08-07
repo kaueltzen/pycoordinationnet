@@ -160,6 +160,7 @@ class AngleLayer(torch.nn.Module):
         self.dense = ModelDense([edim+2] + layers + [edim], **kwargs)
 
     def forward(self, x, x_angles):
+        x_angles = x_angles / 180 * 2*torch.pi
         x_angles = torch.cat((torch.sin(x_angles), torch.cos(x_angles)), dim=1)
         return self.dense(torch.cat((x, x_angles), dim=1))
 
