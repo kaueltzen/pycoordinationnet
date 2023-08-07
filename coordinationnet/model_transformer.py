@@ -19,7 +19,7 @@ import torch
 from .features_coding import NumOxidations, NumGeometries
 
 from .model_config    import DefaultCoordinationNetConfig
-from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer
+from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
 
 
 ## ----------------------------------------------------------------------------
@@ -122,6 +122,9 @@ class ModelSiteLigandsTransformer(torch.nn.Module):
             activation = torch.nn.ELU(), **kwargs):
         super().__init__()
 
+        nencoders = 1
+        nheads    = 4
+
         encoder_layer = torch.nn.TransformerEncoderLayer(
             edim,
             batch_first     = True,
@@ -137,18 +140,20 @@ class ModelSiteLigandsTransformer(torch.nn.Module):
         self.embedding_ligoxid = torch.nn.Embedding(NumOxidations+1, edim)
         # TODO:
         # Include distances between cations and ligands (stored in CoordinationFeatures.distances)
-        self.rbf_angles        = RBFLayer(0, 180, edim)
+        #self.rbf_angles        = RBFLayer(0, 180, dim = int(edim/2), dim_out = edim)
+        #self.rbf_angles        = RBFLayer(0, 180, dim = 2048, dim_out = edim)
+        self.dense_angles      = AngleLayer(edim, [1024, 256, 256], **kwargs)
 
-    def forward(self, x):
-        s = x.summation
+    def forward(self, x_input):
+        s = x_input.summation
         # Sum up the two element columns
-        y = self.embedding_element(x.elements).sum(dim=1, keepdim=True)
+        y = self.embedding_element(x_input.elements).sum(dim=1, keepdim=True)
         # Apply transformer to full data
         x = torch.cat((
-                self.embedding_cls    (x.cls),
-                self.embedding_ligelem(x.ligelem),
-                self.embedding_ligoxid(x.ligoxid),
-                self.rbf_angles       (x.angles[:,:,None]),
+                self.embedding_cls    (x_input.cls),
+                self.embedding_ligelem(x_input.ligelem),
+                self.embedding_ligoxid(x_input.ligoxid),
+#                self.rbf_angles       (x.angles[:,:,None]),
                 # Attach sum of element embeddings
                 y),
                 dim=1)
@@ -158,6 +163,7 @@ class ModelSiteLigandsTransformer(torch.nn.Module):
         # Follow the BERT architecture and extract only the
         # first sequence element (cls) after applying the transformer
         x = x[:,0,:]
+        x = self.dense_angles(x, x_input.angles)
         # Dimension of x is now:
         # (batch, edim)
         # Each material has multiple sites, we have to sum over all entries

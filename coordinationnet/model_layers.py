@@ -134,18 +134,34 @@ class ModelDense(torch.nn.Module):
 ## ----------------------------------------------------------------------------
 
 class RBFLayer(torch.nn.Module):
-    def __init__(self, start, stop, n = 10):
+    def __init__(self, start, stop, dim = 10, dim_out = 10):
         super().__init__()
-        self.linear = torch.nn.Linear(1, n)
+        self.linear = torch.nn.Linear(1, dim)
+        # We need a linear output layer, to prevent that this representation
+        # interferes with the information of other embeddings
+        self.linear_out = torch.nn.Linear(dim, dim_out)
         self.linear.weight.requires_grad = False
         self.linear.weight[:]            = 1
         self.linear.bias.requires_grad   = False
-        self.linear.bias[:]              = -torch.arange(start, stop, (stop-start)/n)
-        self.sigma = (stop-start)/n
+        self.linear.bias[:]              = -torch.arange(start, stop, (stop-start)/dim)
+        self.sigma = (stop-start)/dim
 
-    def __call__(self, x):
+    def forward(self, x):
         x = torch.exp(-self.linear(x)**2/self.sigma)
+        x = self.linear_out(x)
         return x
+
+## ----------------------------------------------------------------------------
+
+class AngleLayer(torch.nn.Module):
+    def __init__(self, edim, layers, **kwargs):
+        super().__init__()
+
+        self.dense = ModelDense([edim+2] + layers + [edim], **kwargs)
+
+    def forward(self, x, x_angles):
+        x_angles = torch.cat((torch.sin(x_angles), torch.cos(x_angles)), dim=1)
+        return self.dense(torch.cat((x, x_angles), dim=1))
 
 ## ----------------------------------------------------------------------------
 
