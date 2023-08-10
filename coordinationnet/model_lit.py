@@ -186,7 +186,7 @@ class LitModel(pl.LightningModule):
                  # pytorch model class and loss function
                  model, loss = torch.nn.L1Loss(),
                  # Trainer options
-                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = 'auto', default_root_dir = 'checkpoints',
+                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = 'auto', plugins = None, default_root_dir = 'checkpoints',
                  # Data options
                  val_size = 0.1, batch_size = 128, num_workers = 2,
                  # Learning rate
@@ -214,6 +214,7 @@ class LitModel(pl.LightningModule):
             'devices'          : devices,
             'strategy'         : strategy,
             'default_root_dir' : default_root_dir,
+            'plugins'          : plugins,
         }
         self.data_options    = {
             'val_size'    : val_size,

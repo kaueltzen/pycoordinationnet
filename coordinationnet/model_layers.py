@@ -177,11 +177,13 @@ class ElementEmbedder(torch.nn.Module):
             embedding = np.concatenate([embedding, np.zeros((1, feat_size))])
             embedding = torch.as_tensor(embedding, dtype=torch.float32)
             self.embedding = torch.nn.Embedding.from_pretrained(embedding, freeze=freeze)
-            self.linear    = torch.nn.Linear(feat_size, edim, bias=False)
+            if edim == 200:
+                self.linear = torch.nn.Identity()
+            else:
+                self.linear = torch.nn.Linear(feat_size, edim, bias=False)
         else:
-            feat_size = 200
-            self.embedding = torch.nn.Embedding(NumElements+1, feat_size)
-            self.linear    = torch.nn.Linear(feat_size, edim, bias=False)
+            self.embedding = torch.nn.Embedding(NumElements+1, edim)
+            self.linear    = torch.nn.Identity()
 
     def forward(self, x):
         x = self.embedding(x)

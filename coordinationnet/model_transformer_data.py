@@ -19,6 +19,7 @@ from __future__ import annotations
 import torch
 
 from copy import copy
+from tqdm import tqdm
 
 from .features_datatypes import CoordinationFeatures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
@@ -726,19 +727,40 @@ class BatchCoordinationFeatures(Batch):
 
 ## ----------------------------------------------------------------------------
 
+class BatchedCoordinationFeaturesData(torch.utils.data.Dataset):
+    def __init__(self, dataset : CoordinationFeaturesData, model_config, batch_size : int, drop_last = False, **kwargs) -> None:
+
+        sampler = torch.utils.data.RandomSampler(range(len(dataset)))
+        sampler = torch.utils.data.BatchSampler(sampler, batch_size, drop_last = drop_last)
+
+        self.dataset = []
+        for batch_idx in tqdm(sampler, desc='Preparing batches...'):
+            X = BatchCoordinationFeatures(
+                [ dataset[i][0] for i in batch_idx ], model_config)
+            y = torch.utils.data.default_collate(
+                [ dataset[i][1] for i in batch_idx ])
+            self.dataset.append((X, y))
+
+    def __len__(self) -> int:
+        return len(self.dataset)
+
+    # Called by pytorch DataLoader to collect items that
+    # are joined later by collate_fn into a batch
+    def __getitem__(self, index):
+        return self.dataset[index]
+
+## ----------------------------------------------------------------------------
+
 class CoordinationFeaturesLoader(torch.utils.data.DataLoader):
 
-    def __init__(self, dataset : CoordinationFeaturesData, model_config, **kwargs) -> None:
+    def __init__(self, dataset : CoordinationFeaturesData, model_config, batch_size = 1, **kwargs) -> None:
         if 'collate_fn' in kwargs:
             raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
-        super().__init__(dataset, collate_fn=self.collate_fn, **kwargs)
 
-        self.model_config = model_config
+        # Generate batches in advance to speed up computation
+        dataset = BatchedCoordinationFeaturesData(dataset, model_config, batch_size)
+
+        super().__init__(dataset, batch_size=1, collate_fn=self.collate_fn, **kwargs)
 
     def collate_fn(self, batch):
-        cofe_list = [ item[0] for item in batch ]
-
-        X = BatchCoordinationFeatures(cofe_list, self.model_config)
-        y = torch.utils.data.default_collate([ item[1] for item in batch ])
-
-        return X, y
+        return batch[0]
