@@ -241,8 +241,6 @@ class ModelSiteFeaturesTransformer(torch.nn.Module):
             x = torch.cat((x, self.embedding_oxidation(x_sites.oxidations)), dim=1)
         if x_ces is not None:
             x = torch.cat((x, self.forward_ces(x_ces)), dim=1)
-        if self.transformer_ligands is not None:
-            x = torch.cat((x, self.forward_ligands(x_ligands)), dim=1)
         # Dimension of x is now:
         # (batch, sequence, edim)
         if self.transformer is not None:
@@ -255,6 +253,8 @@ class ModelSiteFeaturesTransformer(torch.nn.Module):
             x = x.sum(dim=1)
         # Dimension of x is now:
         # (batch, edim)
+        if self.transformer_ligands is not None:
+            x = x + self.forward_ligands(x_ligands)
         # Each material has multiple sites, we have to sum over all entries
         # that belong to the same material. The batch size then corresponds
         # to the number of materials in the batch

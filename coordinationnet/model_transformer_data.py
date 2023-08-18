@@ -16,6 +16,10 @@
 
 from __future__ import annotations
 
+import dill
+import io
+import os
+import tarfile
 import torch
 
 from copy import copy
@@ -47,6 +51,13 @@ class Batch():
         for attr, value in result.__dict__.items():
             if hasattr(value, 'pin_memory'):
                  result.__setattr__(attr, value.pin_memory())
+        return result
+
+    def share_memory_(self):
+        result = copy(self)
+        for attr, value in result.__dict__.items():
+            if hasattr(value, 'share_memory_'):
+                 result.__setattr__(attr, value.share_memory_())
         return result
 
 ## ----------------------------------------------------------------------------
@@ -728,39 +739,106 @@ class BatchCoordinationFeatures(Batch):
 ## ----------------------------------------------------------------------------
 
 class BatchedCoordinationFeaturesData(torch.utils.data.Dataset):
-    def __init__(self, dataset : CoordinationFeaturesData, model_config, batch_size : int, drop_last = False, **kwargs) -> None:
+    def __init__(self, dataset : CoordinationFeaturesData, model_config, batch_size : int, drop_last = False, cache_file = None, **kwargs) -> None:
+
+        self.cache_file = cache_file
+        self.dataset    = []
+        self.n          = 0
+
+        if self.cache_file is not None and os.path.exists(self.cache_file):
+            self._open_cache()
+            config = self._read_config()
+            assert config['batch_size'] == batch_size
+            self.n = config['n']
+
+        else:
+            if self.cache_file is not None:
+                self._open_cache('w')
+
+            self._precompute_batches(dataset, model_config, batch_size, drop_last, cache_file)
+
+            if self.cache_file is not None:
+                self._close_cache()
+                self._open_cache()
+
+    def _precompute_batches(self, dataset, model_config, batch_size, drop_last, cache_file):
+
+        tarf = self._open_cache('w') if self.cache_file is not None else None
 
         sampler = torch.utils.data.RandomSampler(range(len(dataset)))
         sampler = torch.utils.data.BatchSampler(sampler, batch_size, drop_last = drop_last)
 
-        self.dataset = []
-        for batch_idx in tqdm(sampler, desc='Preparing batches...'):
+        for index, batch_idx in tqdm(enumerate(sampler), desc='Preparing batches...', total=len(sampler)):
+
             X = BatchCoordinationFeatures(
                 [ dataset[i][0] for i in batch_idx ], model_config)
             y = torch.utils.data.default_collate(
                 [ dataset[i][1] for i in batch_idx ])
-            self.dataset.append((X, y))
+
+            if self.cache_file is None:
+                self.dataset.append((X, y))
+            else:
+                self._write_cached_batch(tarf, index, (X, y))
+
+            self.n += 1
+
+        self._write_config(tarf, {'batch_size': batch_size, 'model_config': model_config, 'n': self.n})
+
+    def _open_cache(self, mode = 'r'):
+        return tarfile.open(self.cache_file, mode)
+
+    def _read_cached_data(self, filename):
+        tarf = self._open_cache()
+        f = tarf.extractfile(filename)
+        data = dill.load(f)
+        tarf.close()
+        return data
+
+    def _write_cached_data(self, tarf, filename, data):
+        buffer = io.BytesIO()
+        dill.dump(data, buffer)
+        buffer.seek(0)
+
+        tarinfo = tarfile.TarInfo(filename)
+        tarinfo.size = len(buffer.getbuffer())
+
+        tarf.addfile(tarinfo, buffer)
+
+    def _read_cached_batch(self, i):
+        return self._read_cached_data(self._cached_batch_filename(i))
+
+    def _write_cached_batch(self, tarf, i, data):
+        self._write_cached_data(tarf, self._cached_batch_filename(i), data)
+
+    def _read_config(self):
+        return self._read_cached_data("config.dill")
+
+    def _write_config(self, tarf, config):
+        self._write_cached_data(tarf, "config.dill", config)
+
+    def _cached_batch_filename(self, i):
+        return f'batch_{i}.dill'
 
     def __len__(self) -> int:
-        return len(self.dataset)
+        return self.n
 
     # Called by pytorch DataLoader to collect items that
     # are joined later by collate_fn into a batch
     def __getitem__(self, index):
-        return self.dataset[index]
+        if self.cache_file is None:
+            return self.dataset[index]
+        else:
+            return self._read_cached_batch(index)
 
 ## ----------------------------------------------------------------------------
 
 class CoordinationFeaturesLoader(torch.utils.data.DataLoader):
 
-    def __init__(self, dataset : CoordinationFeaturesData, model_config, batch_size = 1, **kwargs) -> None:
+    def __init__(self, dataset : BatchedCoordinationFeaturesData, batch_size = 1, **kwargs) -> None:
         if 'collate_fn' in kwargs:
             raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
 
-        # Generate batches in advance to speed up computation
-        dataset = BatchedCoordinationFeaturesData(dataset, model_config, batch_size)
-
-        super().__init__(dataset, batch_size=1, collate_fn=self.collate_fn, **kwargs)
+        super().__init__(dataset, batch_size=1, collate_fn=self.collate_fn, prefetch_factor=1, **kwargs)
 
     def collate_fn(self, batch):
         return batch[0]

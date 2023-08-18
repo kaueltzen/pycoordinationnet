@@ -61,10 +61,6 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
     def __getitem__(self, index):
         return self.X[index], self.y[index]
 
-    def subset(self, index):
-        X, y = self[index]
-        return CoordinationFeaturesData(X, y = y)
-
     @classmethod
     def load(cls, filename : str) -> 'CoordinationFeaturesData':
 

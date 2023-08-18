@@ -17,65 +17,70 @@
 import dill
 import torch
 
+from typing                  import Union
 from copy                    import deepcopy
 from sklearn.model_selection import KFold
 
 from .model_config           import CoordinationNetConfig
 from .model_data             import CoordinationFeaturesData
 from .model_transformer      import ModelCoordinationNet
-from .model_transformer_data import CoordinationFeaturesLoader
+from .model_transformer_data import BatchedCoordinationFeaturesData, CoordinationFeaturesLoader
 from .model_lit              import LitModel, LitDataset
 
 ## ----------------------------------------------------------------------------
 
 class LitCoordinationFeaturesData(LitDataset):
-    def __init__(self, data : CoordinationFeaturesData, model_config : CoordinationNetConfig, val_size = 0.2, batch_size = 32, num_workers = 2):
+    def __init__(self, data : CoordinationFeaturesData, val_size = 0.2, batch_size = 32, num_workers = 2):
         super().__init__(data, val_size = val_size, batch_size = batch_size, num_workers = num_workers)
-        self.model_config = model_config
 
     # Custom method to create a data loader
     def get_dataloader(self, data):
-        return CoordinationFeaturesLoader(data, self.model_config, batch_size = self.batch_size, num_workers = self.num_workers)
+        return CoordinationFeaturesLoader(data, num_workers = self.num_workers)
 
 ## ----------------------------------------------------------------------------
 
 class CoordinationNet:
 
-    def __init__(self, **kwargs):
+    def __init__(self, cache_file = None, **kwargs):
 
         self.lit_model = LitModel(ModelCoordinationNet, **kwargs)
+        self.cache_file = cache_file
 
-    def train(self, data : CoordinationFeaturesData):
+    def train(self, data : Union[CoordinationFeaturesData, BatchedCoordinationFeaturesData]):
+
+        data = self.prepare_data(data)
 
         # Fit scaler to target values. The scaling of model outputs is done
         # by the model itself
-        self.lit_model.model.scaler_outputs.fit(data.y)
+        # [TODO]
+        #self.lit_model.model.scaler_outputs.fit(data[:][1])
 
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_model.data_options)
+        data = LitCoordinationFeaturesData(data, **self.lit_model.data_options)           
 
         self.lit_model, stats = self.lit_model._train(data)
 
         return stats
 
-    def test(self, data : CoordinationFeaturesData):
+    def test(self, data : Union[CoordinationFeaturesData, BatchedCoordinationFeaturesData]):
 
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_model.data_options)
+        data = self.prepare_data(data)
+        data = LitCoordinationFeaturesData(data, **self.lit_model.data_options)
 
         return self.lit_model._test(data)
 
-    def predict(self, data : CoordinationFeaturesData):
+    def predict(self, data):
 
-        data = LitCoordinationFeaturesData(data, self.lit_model.model.model_config, **self.lit_model.data_options)
+        data = self.prepare_data(data)
+        data = LitCoordinationFeaturesData(data, **self.lit_model.data_options)
 
         return self.lit_model._predict(data)
 
-    def cross_validation(self, data : CoordinationFeaturesData, n_splits, shuffle = True, random_state = 42):
-
-        if not isinstance(data, CoordinationFeaturesData):
-            raise ValueError(f'Data must be given as CoordinationFeaturesData, but got type {type(data)}')
+    def cross_validation(self, data, n_splits, shuffle = True, random_state = 42):
 
         if n_splits < 2:
             raise ValueError(f'k-fold cross-validation requires at least one train/test split by setting n_splits=2 or more, got n_splits={n_splits}')
+
+        data  = self.prepare_data(data)
 
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
@@ -86,8 +91,8 @@ class CoordinationNet:
 
             print(f'Training fold {fold+1}/{n_splits}...')
 
-            data_train = data.subset(index_train)
-            data_test  = data.subset(index_test )
+            data_train = torch.utils.data.Subset(data, index_train)
+            data_test  = torch.utils.data.Subset(data, index_test )
 
             # Clone model
             self.lit_model = deepcopy(initial_model)
@@ -112,6 +117,21 @@ class CoordinationNet:
         test_loss = self.lit_model.loss(y_hat, y).item()
 
         return test_loss, y, y_hat
+
+    def prepare_data(self, data):
+
+        if isinstance(data, torch.utils.data.Subset):
+            if not isinstance(data.dataset, BatchedCoordinationFeaturesData):
+                raise ValueError(f'Data Subset must contain dataset of type BatchedCoordinationFeaturesData, but got type {type(data.dataset)}')
+
+        else:
+            if not (isinstance(data, CoordinationFeaturesData) or isinstance(data, BatchedCoordinationFeaturesData)):
+                raise ValueError(f'Data must be given as CoordinationFeaturesData or BatchedCoordinationFeaturesData, but got type {type(data)}')
+
+            if isinstance(data, CoordinationFeaturesData):
+                data = BatchedCoordinationFeaturesData(data, self.lit_model.model.model_config, self.lit_model.data_options['batch_size'], cache_file = self.cache_file)
+
+        return data
 
     @classmethod
     def load(cls, filename : str) -> 'CoordinationNet':
