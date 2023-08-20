@@ -46,16 +46,18 @@ class CoordinationNet:
         self.lit_model = LitModel(ModelCoordinationNet, **kwargs)
         self.cache_file = cache_file
 
+    def fit_scaler(self, data : LitCoordinationFeaturesData):
+        y = torch.cat([ y_batch for _, y_batch in data.get_dataloader(data.data) ])
+        self.lit_model.model.scaler_outputs.fit(y)
+
     def train(self, data : Union[CoordinationFeaturesData, BatchedCoordinationFeaturesData]):
 
         data = self.prepare_data(data)
+        data = LitCoordinationFeaturesData(data, **self.lit_model.data_options)
 
         # Fit scaler to target values. The scaling of model outputs is done
         # by the model itself
-        # [TODO]
-        #self.lit_model.model.scaler_outputs.fit(data[:][1])
-
-        data = LitCoordinationFeaturesData(data, **self.lit_model.data_options)           
+        self.fit_scaler(data)
 
         self.lit_model, stats = self.lit_model._train(data)
 
