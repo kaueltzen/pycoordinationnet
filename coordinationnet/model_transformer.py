@@ -135,14 +135,12 @@ class ModelSiteLigandsTransformer(torch.nn.Module):
 
         self.transformer       = torch.nn.TransformerEncoder(encoder_layer, nencoders)
         self.embedding_cls     = torch.nn.Embedding(1, edim)
-        self.embedding_element = ElementEmbedder(edim, from_pretrained=True)
-        self.embedding_ligelem = ElementEmbedder(edim, from_pretrained=True)
+        self.embedding_element = ElementEmbedder(edim, from_pretrained=True, freeze=False)
+        self.embedding_ligelem = ElementEmbedder(edim, from_pretrained=True, freeze=False)
         self.embedding_ligoxid = torch.nn.Embedding(NumOxidations+1, edim)
-        # TODO:
-        # Include distances between cations and ligands (stored in CoordinationFeatures.distances)
         #self.rbf_angles        = RBFLayer(0, 180, dim = int(edim/2), dim_out = edim)
         #self.rbf_angles        = RBFLayer(0, 180, dim = 2048, dim_out = edim)
-        self.dense_angles      = AngleLayer(edim, [1024, 256, 256], **kwargs)
+        self.dense_angles      = AngleLayer(edim, [edim, edim], **kwargs)
 
     def forward(self, x_input):
         s = x_input.summation
@@ -163,12 +161,12 @@ class ModelSiteLigandsTransformer(torch.nn.Module):
         # Follow the BERT architecture and extract only the
         # first sequence element (cls) after applying the transformer
         x = x[:,0,:]
-        x = self.dense_angles(x, x_input.angles)
+        x = self.dense_angles(x, x_input.distances, x_input.angles)
         # Dimension of x is now:
         # (batch, edim)
-        # Each material has multiple sites, we have to sum over all entries
-        # that belong to the same material. The batch size then corresponds
-        # to the number of materials in the batch
+        # Each site has multiple CE-pairs and ligands connecting them, we
+        # have to sum over all entries that belong to the same site. The
+        # batch size then corresponds to the number of sites in the batch
         x = s.T @ x
         return x
 
@@ -196,7 +194,7 @@ class ModelSiteFeaturesTransformer(torch.nn.Module):
         self.transformer         = None
         self.transformer_ligands = None
         self.embedding_cls       = torch.nn.Embedding(1, edim)
-        self.embedding_element   = ElementEmbedder(edim, from_pretrained=True)
+        self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=False)
         self.embedding_ces       = torch.nn.Embedding(NumGeometries+1, edim)
         self.embedding_oxidation = None
 
@@ -253,12 +251,14 @@ class ModelSiteFeaturesTransformer(torch.nn.Module):
             x = x.sum(dim=1)
         # Dimension of x is now:
         # (batch, edim)
-        if self.transformer_ligands is not None:
-            x = x + self.forward_ligands(x_ligands)
         # Each material has multiple sites, we have to sum over all entries
         # that belong to the same material. The batch size then corresponds
         # to the number of materials in the batch
         x = x_sites.summation.T @ x
+
+        if self.transformer_ligands is not None:
+            x_ligands = x_sites.summation.T @ self.forward_ligands(x_ligands)[:,0,:]
+            x = torch.cat((x, x_ligands), dim=1)
 
         return x
 
@@ -459,6 +459,11 @@ class ModelCoordinationNet(torch.nn.Module):
         site_features_csms    = model_config['site_features_csms']
         site_features_ligands = model_config['site_features_ligands']
 
+        # Determine input dimension of the final dense neural network
+        dim_dense_in = edim
+        if site_features_ligands:
+            dim_dense_in *= 2
+
         if model_config['composition']:
             self.transformer_composition   = ModelComposition            (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, **kwargs)
         if model_config['sites']:
@@ -471,7 +476,7 @@ class ModelCoordinationNet(torch.nn.Module):
             self.transformer_ce_neighbors  = ModelCeNeighborsTransformer (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, **kwargs)
 
         # Final dense layer
-        self.dense = ModelDense(layers, **kwargs)
+        self.dense = ModelDense([dim_dense_in] + layers, **kwargs)
 
         print(f'Creating a transformer model with {self.n_parameters:,} parameters')
 

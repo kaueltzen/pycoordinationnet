@@ -425,11 +425,12 @@ class BatchLigandSites(Batch):
         m, p = self.__compute_m_and_p__(cofe_list)
 
         # Allocate batch data
-        self.cls      = torch.zeros((m, 1), dtype=torch.int)
-        self.elements = torch.zeros((m, 2), dtype=torch.int)
-        self.ligelem  = torch.zeros((m, 1), dtype=torch.int)
-        self.ligoxid  = torch.zeros((m, 1), dtype=torch.int)
-        self.angles   = torch.zeros((m, 1), dtype=torch.float)
+        self.cls       = torch.zeros((m, 1), dtype=torch.int)
+        self.elements  = torch.zeros((m, 2), dtype=torch.int)
+        self.ligelem   = torch.zeros((m, 1), dtype=torch.int)
+        self.ligoxid   = torch.zeros((m, 1), dtype=torch.int)
+        self.distances = torch.zeros((m, 1), dtype=torch.float)
+        self.angles    = torch.zeros((m, 1), dtype=torch.float)
         # The summation matrix allows to reduce a batch of ligands
         # to a batch of sites across several materials
         self.summation  = self.__compute_s__(cofe_list, m, p)
@@ -443,8 +444,9 @@ class BatchLigandSites(Batch):
             for nb in features.ce_neighbors:
                 l = len(nb['ligand_indices'])
                 if l > 0:
-                    self.elements[i:(i+l), 0] = features.sites.elements[nb['site'   ]]
-                    self.elements[i:(i+l), 1] = features.sites.elements[nb['site_to']]
+                    self.elements [i:(i+l), 0] = features.sites.elements[nb['site'   ]]
+                    self.elements [i:(i+l), 1] = features.sites.elements[nb['site_to']]
+                    self.distances[i:(i+l), 0] = nb['distance']
                     for j, k in enumerate(nb['ligand_indices']):
                         self.ligelem[i+j, 0] = features.sites.elements  [k]
                         self.ligoxid[i+j, 0] = features.sites.oxidations[k]
@@ -752,14 +754,7 @@ class BatchedCoordinationFeaturesData(torch.utils.data.Dataset):
             self.n = config['n']
 
         else:
-            if self.cache_file is not None:
-                self._open_cache('w')
-
             self._precompute_batches(dataset, model_config, batch_size, drop_last, cache_file)
-
-            if self.cache_file is not None:
-                self._close_cache()
-                self._open_cache()
 
     def _precompute_batches(self, dataset, model_config, batch_size, drop_last, cache_file):
 
@@ -783,6 +778,8 @@ class BatchedCoordinationFeaturesData(torch.utils.data.Dataset):
             self.n += 1
 
         self._write_config(tarf, {'batch_size': batch_size, 'model_config': model_config, 'n': self.n})
+
+        tarf.close()
 
     def _open_cache(self, mode = 'r'):
         return tarfile.open(self.cache_file, mode)
@@ -838,7 +835,7 @@ class CoordinationFeaturesLoader(torch.utils.data.DataLoader):
         if 'collate_fn' in kwargs:
             raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
 
-        super().__init__(dataset, batch_size=1, collate_fn=self.collate_fn, prefetch_factor=1, **kwargs)
+        super().__init__(dataset, batch_size=1, collate_fn=self.collate_fn, prefetch_factor=2, **kwargs)
 
     def collate_fn(self, batch):
         return batch[0]

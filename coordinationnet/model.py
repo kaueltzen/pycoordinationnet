@@ -29,6 +29,10 @@ from .model_lit              import LitModel, LitDataset
 
 ## ----------------------------------------------------------------------------
 
+torch.multiprocessing.set_sharing_strategy('file_system')
+
+## ----------------------------------------------------------------------------
+
 class LitCoordinationFeaturesData(LitDataset):
     def __init__(self, data : CoordinationFeaturesData, val_size = 0.2, batch_size = 32, num_workers = 2):
         super().__init__(data, val_size = val_size, batch_size = batch_size, num_workers = num_workers)
