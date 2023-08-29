@@ -213,6 +213,7 @@ class ModelSiteFeaturesTransformer(torch.nn.Module):
 
         if ligands:
             self.transformer_ligands = ModelSiteLigandsTransformer(edim, nheads = nheads, nencoders = nencoders, dim_feedforward = dim_feedforward)
+            self.dense_ligands       = torch.nn.Linear(2*edim, edim)
 
     def forward_ces(self, x_ces):
         # Compute CE embeddings per site
@@ -251,14 +252,15 @@ class ModelSiteFeaturesTransformer(torch.nn.Module):
             x = x.sum(dim=1)
         # Dimension of x is now:
         # (batch, edim)
+
+        if self.transformer_ligands is not None:
+            x_ligands = self.forward_ligands(x_ligands)[:,0,:]
+            x = self.dense_ligands(torch.cat((x, x_ligands), dim=1))
+
         # Each material has multiple sites, we have to sum over all entries
         # that belong to the same material. The batch size then corresponds
         # to the number of materials in the batch
         x = x_sites.summation.T @ x
-
-        if self.transformer_ligands is not None:
-            x_ligands = x_sites.summation.T @ self.forward_ligands(x_ligands)[:,0,:]
-            x = torch.cat((x, x_ligands), dim=1)
 
         return x
 
@@ -461,8 +463,6 @@ class ModelCoordinationNet(torch.nn.Module):
 
         # Determine input dimension of the final dense neural network
         dim_dense_in = edim
-        if site_features_ligands:
-            dim_dense_in *= 2
 
         if model_config['composition']:
             self.transformer_composition   = ModelComposition            (edim, nencoders = nencoders, nheads = nheads, dropout_transformer = dropout_transformer, dim_feedforward = dim_feedforward, **kwargs)
