@@ -17,6 +17,7 @@
 import torch
 
 from torch_geometric.data import Data
+from torch_geometric.nn   import Sequential, GCNConv, global_mean_pool
 
 from .features_coding import NumOxidations, NumGeometries
 
@@ -49,14 +50,28 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.embedding_ligands = ElementEmbedder(edim, from_pretrained=True, freeze=False)
         self.embedding_ces     = torch.nn.Embedding(NumGeometries+1, edim)
 
+        self.layers = Sequential('x, edge_index', [
+                (GCNConv(edim, edim), 'x, edge_index -> x'),
+                torch.nn.ELU(inplace=True),
+                (GCNConv(edim, edim), 'x, edge_index -> x'),
+                torch.nn.ELU(inplace=True),
+                #(global_mean_pool, 'x -> x'),
+            ])
+
         # Final dense layer
         self.dense = ModelDense([edim] + layers, **kwargs)
 
         print(f'Creating a GNN model with {self.n_parameters:,} parameters')
 
-    def forward(self, x):
+    def forward(self, x_input):
+
+        x_elements = self.embedding_element(x_input.graphs.x['elements'])
+
+        x = self.layers(x_elements, x_input.graphs.edge_index)
+        x = self.dense(x)
 
         print(x)
+
         raise ValueError('')
 
         return x
