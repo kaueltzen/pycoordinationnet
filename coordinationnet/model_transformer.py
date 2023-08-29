@@ -21,7 +21,6 @@ from .features_coding import NumOxidations, NumGeometries
 from .model_config    import DefaultCoordinationNetConfig
 from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
 
-
 ## ----------------------------------------------------------------------------
 
 class ModelComposition(torch.nn.Module):

@@ -29,36 +29,7 @@ from .features_datatypes import CoordinationFeatures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
 
 from .model_config       import CoordinationNetConfig
-from .model_data         import CoordinationFeaturesData
-
-## ----------------------------------------------------------------------------
-
-class Batch():
-
-    # This function is used by the estimator to push
-    # data to GPU
-    def to(self, device=None):
-        result = copy(self)
-        for attr, value in result.__dict__.items():
-            if hasattr(value, 'to'):
-                 result.__setattr__(attr, value.to(device=device))
-        return result
-
-    # This function will be called by the pytorch DataLoader
-    # after collate_fn has assembled the batch
-    def pin_memory(self):
-        result = copy(self)
-        for attr, value in result.__dict__.items():
-            if hasattr(value, 'pin_memory'):
-                 result.__setattr__(attr, value.pin_memory())
-        return result
-
-    def share_memory_(self):
-        result = copy(self)
-        for attr, value in result.__dict__.items():
-            if hasattr(value, 'share_memory_'):
-                 result.__setattr__(attr, value.share_memory_())
-        return result
+from .model_data         import CoordinationFeaturesData, Batch
 
 ## ----------------------------------------------------------------------------
 
