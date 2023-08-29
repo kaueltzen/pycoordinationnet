@@ -16,9 +16,12 @@
 
 import torch
 
-from torch_geometric.data import Data as GraphData
+from torch_geometric.data   import InMemoryDataset
+from torch_geometric.data   import Data       as GraphData
+from torch_geometric.loader import DataLoader as GraphDataLoader
 
-from .features_coding import NumOxidations, NumGeometries
+from .features_coding    import NumOxidations, NumGeometries
+from .features_datatypes import CoordinationFeatures
 
 from .model_config    import DefaultCoordinationNetConfig
 from .model_data      import Batch
@@ -66,14 +69,14 @@ class BatchCENGraph(Batch):
                     # Get site indices
                     idx = [ nb['site'], nb['site_to'] ] + nb['ligand_indices']
                     # Construct graph
-                    x = torch.tensor({
-                        'elements'  : torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)
-                        'oxidations': torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)
-                        'ces'       : torch.tensor([ site_ces[site]                  for site in idx ], dtype=torch.long)
-                        'csm'       : torch.tensor([ site_csm[site]                  for site in idx ], dtype=torch.float)
-                        'angles'    : torch.tensor([ 0.0 + 0.0 ] + nb['angles'], dtype=torch.float)
-                        'distance'  : torch.tensor(nb['distance'], dtype=torch.float)
-                    )}
+                    x = {
+                        'elements'  : torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long),
+                        'oxidations': torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long),
+                        'ces'       : torch.tensor([ site_ces[site]                  for site in idx ], dtype=torch.long),
+                        'csm'       : torch.tensor([ site_csm[site]                  for site in idx ], dtype=torch.float),
+                        'angles'    : torch.tensor([ 0.0 + 0.0 ] + nb['angles'], dtype=torch.float),
+                        'distance'  : torch.tensor(nb['distance'], dtype=torch.float),
+                    }
                     e = [[], []]
                     for j, k in enumerate(nb['ligand_indices']):
                         # From          ; To
@@ -121,3 +124,20 @@ class BatchCENGraph(Batch):
             j += 1
 
         return S
+
+## ----------------------------------------------------------------------------
+
+class GraphCoordinationFeaturesLoader(torch.utils.data.DataLoader):
+
+    def __init__(self, dataset, **kwargs) -> None:
+
+        if 'collate_fn' in kwargs:
+            raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
+
+        super().__init__(dataset, collate_fn=self.collate_fn, **kwargs)
+
+    def collate_fn(self, batch):
+        x = [ item[0] for item in batch ]
+        y = [ item[1] for item in batch ]
+
+        return BatchCENGraph(x), torch.utils.data.default_collate(y)

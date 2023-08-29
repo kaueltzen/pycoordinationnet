@@ -18,6 +18,7 @@ import dill
 import torch
 import numpy as np
 
+from copy import copy
 from typing import Any
 from pymatgen.core.structure import Structure
 

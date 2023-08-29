@@ -24,3 +24,46 @@ from .model_config    import DefaultCoordinationNetConfig
 from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
 
 ## ----------------------------------------------------------------------------
+
+class ModelGraphCoordinationNet(torch.nn.Module):
+    def __init__(self,
+        # Specify model components
+        model_config = DefaultCoordinationNetConfig,
+        # Transformer options
+        edim = 200,
+        # **kwargs contains options for dense layers
+        layers = [200, 512, 128, 1], **kwargs):
+
+        super().__init__()
+
+        print(f'{model_config}')
+
+        # The model config determines which components of the model
+        # are active
+        self.model_config      = model_config
+        # Optional scaler of model outputs (predictions)
+        self.scaler_outputs    = TorchStandardScaler(layers[-1])
+
+        # Embeddings
+        self.embedding_element = ElementEmbedder(edim, from_pretrained=True, freeze=False)
+        self.embedding_ligands = ElementEmbedder(edim, from_pretrained=True, freeze=False)
+        self.embedding_ces     = torch.nn.Embedding(NumGeometries+1, edim)
+
+        # Final dense layer
+        self.dense = ModelDense([edim] + layers, **kwargs)
+
+        print(f'Creating a GNN model with {self.n_parameters:,} parameters')
+
+    def forward(self, x):
+
+        print(x)
+        raise ValueError('')
+
+        return x
+
+    @property
+    def n_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+    def parameters_grouped(self):
+        return { 'all': self.parameters() }
