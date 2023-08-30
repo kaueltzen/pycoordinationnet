@@ -44,23 +44,25 @@ class CENData(GenericDataset):
 
     @classmethod
     def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
+        nsites = len(features.sites.elements)
         # Initialize graph with isolated nodes for each site
         x = {
             'elements'  : torch.tensor(features.sites.elements  , dtype=torch.long),
             'oxidations': torch.tensor(features.sites.oxidations, dtype=torch.long),
+            'geometries': torch.tensor(nsites*[NumGeometries]   , dtype=torch.long),
         }
         # Global edge index, initialize with self-connections for
         # isolated nodes
-        e = [[ i for i, _ in enumerate(features.sites.elements) ],
-             [ i for i, _ in enumerate(features.sites.elements) ]]
+        e = [[ i for i in range(nsites) ],
+             [ i for i in range(nsites) ]]
         # Global node index
         i = len(features.sites.elements)
         # Some materials do not have CE pairs
         if len(features.ce_neighbors) == 0:
             return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
         # Get CE symbols and CSMs
-        site_ces = len(features.sites.elements)*[NumGeometries]
-        site_csm = len(features.sites.elements)*[0.0]
+        site_ces = nsites*[NumGeometries]
+        site_csm = nsites*[0.0]
         # Each site may have multiple CEs, but in almost all cases a site fits only one CE.
         # Some sites (anions) do not have any site information, where we use the value
         # `NumGeometries`. Note that this value is also used for padding, but the mask
@@ -80,6 +82,7 @@ class CENData(GenericDataset):
                 # Construct graph
                 x['elements'  ] = torch.cat((x['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)))
                 x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
+                x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long)))
 
                 for j, _ in enumerate(nb['ligand_indices']):
                     # From          ; To

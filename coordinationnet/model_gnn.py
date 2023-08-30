@@ -22,7 +22,7 @@ from torch_geometric.nn   import Sequential, GCNConv, global_mean_pool
 from .features_coding import NumOxidations, NumGeometries
 
 from .model_config    import DefaultCoordinationNetConfig
-from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
+from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer, PaddedEmbedder
 
 ## ----------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         print(f'{model_config}')
 
         # Dimension of the graph features
-        fdim = 2*edim
+        fdim = 3*edim
 
         # The model config determines which components of the model
         # are active
@@ -49,10 +49,13 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.scaler_outputs    = TorchStandardScaler(layers[-1])
 
         # Embeddings
-        self.embedding_element = ElementEmbedder(edim, from_pretrained=True, freeze=False)
-        self.embedding_ces     = torch.nn.Embedding(NumGeometries+1, edim)
+        self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=False)
+        self.embedding_oxidation = torch.nn.Embedding(NumOxidations, edim)
+        self.embedding_geometry  = PaddedEmbedder(NumGeometries, edim)
 
         self.layers = Sequential('x, edge_index, batch', [
+                (GCNConv(fdim, fdim), 'x, edge_index -> x'),
+                torch.nn.ELU(inplace=True),
                 (GCNConv(fdim, fdim), 'x, edge_index -> x'),
                 torch.nn.ELU(inplace=True),
                 (GCNConv(fdim, fdim), 'x, edge_index -> x'),
@@ -67,14 +70,17 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
     def forward(self, x_input):
 
-        x_elements   = self.embedding_element(x_input.x['elements'])
-        x_oxidations = self.embedding_element(x_input.x['oxidations'])
+        # Get embeddings of various features
+        x_elements   = self.embedding_element  (x_input.x['elements'  ])
+        x_oxidations = self.embedding_oxidation(x_input.x['oxidations'])
+        x_geometries = self.embedding_geometry (x_input.x['geometries'])
 
-        x = torch.cat((x_elements, x_oxidations), dim=1)
+        # Concatenate embeddings to yield a single feature vector per node
+        x = torch.cat((x_elements, x_oxidations, x_geometries), dim=1)
 
-        edge_index = x_input.edge_index
-
-        x = self.layers(x, edge_index, x_input.batch)
+        # Propagate features through graph network
+        x = self.layers(x, x_input.edge_index, x_input.batch)
+        # Apply final dense layer
         x = self.dense(x)
 
         return x
