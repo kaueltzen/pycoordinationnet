@@ -166,17 +166,10 @@ class AngleLayer(torch.nn.Module):
 
 ## ----------------------------------------------------------------------------
 
-class PaddedEmbedder(torch.nn.Module):
+class PaddedEmbedder(torch.nn.Embedding):
     def __init__(self, num_embeddings, embedding_dim, **kwargs):
-        super().__init__()
-        self.e1 = torch.nn.Embedding(num_embeddings, embedding_dim, **kwargs)
-        self.e2 = torch.nn.Embedding.from_pretrained(torch.tensor([embedding_dim*[0.0]]), freeze=True)
-
-    def forward(self, x):
-
-        x = [ self.e1(item) if item < self.e1.num_embeddings else self.e2(item-self.e1.num_embeddings) for item in x ]
-
-        return torch.stack(x)
+        super().__init__(num_embeddings+1, embedding_dim, **kwargs)
+        self.weight.data[num_embeddings-1][:] = 0
 
 ## ----------------------------------------------------------------------------
 

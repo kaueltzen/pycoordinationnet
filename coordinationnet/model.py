@@ -31,7 +31,7 @@ from .model_lit              import LitModel, LitDataset
 
 ## ----------------------------------------------------------------------------
 
-torch.multiprocessing.set_sharing_strategy('file_system')
+#torch.multiprocessing.set_sharing_strategy('file_system')
 
 ## ----------------------------------------------------------------------------
 
