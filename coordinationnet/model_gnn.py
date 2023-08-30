@@ -33,11 +33,14 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         # Transformer options
         edim = 200,
         # **kwargs contains options for dense layers
-        layers = [200, 512, 128, 1], **kwargs):
+        layers = [512, 128, 1], **kwargs):
 
         super().__init__()
 
         print(f'{model_config}')
+
+        # Dimension of the graph features
+        fdim = 2*edim
 
         # The model config determines which components of the model
         # are active
@@ -47,28 +50,31 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         # Embeddings
         self.embedding_element = ElementEmbedder(edim, from_pretrained=True, freeze=False)
-        self.embedding_ligands = ElementEmbedder(edim, from_pretrained=True, freeze=False)
         self.embedding_ces     = torch.nn.Embedding(NumGeometries+1, edim)
 
         self.layers = Sequential('x, edge_index, batch', [
-                (GCNConv(edim, edim), 'x, edge_index -> x'),
+                (GCNConv(fdim, fdim), 'x, edge_index -> x'),
                 torch.nn.ELU(inplace=True),
-                (GCNConv(edim, edim), 'x, edge_index -> x'),
+                (GCNConv(fdim, fdim), 'x, edge_index -> x'),
                 torch.nn.ELU(inplace=True),
                 (global_mean_pool, 'x, batch -> x'),
             ])
 
         # Final dense layer
-        self.dense = ModelDense([edim] + layers, **kwargs)
+        self.dense = ModelDense([fdim] + layers, **kwargs)
 
         print(f'Creating a GNN model with {self.n_parameters:,} parameters')
 
     def forward(self, x_input):
 
-        x_elements = self.embedding_element(x_input.x['elements'])
+        x_elements   = self.embedding_element(x_input.x['elements'])
+        x_oxidations = self.embedding_element(x_input.x['oxidations'])
+
+        x = torch.cat((x_elements, x_oxidations), dim=1)
+
         edge_index = x_input.edge_index
 
-        x = self.layers(x_elements, edge_index, x_input.batch)
+        x = self.layers(x, edge_index, x_input.batch)
         x = self.dense(x)
 
         return x

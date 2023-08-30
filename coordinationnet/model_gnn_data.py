@@ -38,7 +38,7 @@ class CENData(GenericDataset):
         X = [ item[0] for item in dataset]
         y = [ item[1] for item in dataset]
 
-        X = self.__compute_graphs__(X, verbose=False)
+        X = self.__compute_graphs__(X, verbose=True)
 
         super().__init__(X, y)
 
