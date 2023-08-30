@@ -44,17 +44,19 @@ class CENData(GenericDataset):
 
     @classmethod
     def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
+        x = {
+            'elements'  : torch.empty((0,), dtype=torch.long),
+            'oxidations': torch.empty((0,), dtype=torch.long),
+            #'ces'       : torch.empty((0,), dtype=torch.long),
+            #'csm'       : torch.empty((0,), dtype=torch.float),
+            #'angles'    : torch.empty((0,), dtype=torch.float),
+            #'distance'  : torch.empty((0,), dtype=torch.float),
+        }
+        # Global edge index
+        e = [[], []]
         # Some materials do not have CE pairs
         if len(features.ce_neighbors) == 0:
-            x = {
-                'elements'  : torch.empty((0,), dtype=torch.long),
-                'oxidations': torch.empty((0,), dtype=torch.long),
-                'ces'       : torch.empty((0,), dtype=torch.long),
-                'csm'       : torch.empty((0,), dtype=torch.float),
-                'angles'    : torch.empty((0,), dtype=torch.float),
-                #'distance'  : torch.empty((0,), dtype=torch.float),
-            }
-            return GraphData(x=x, edge_index=torch.empty((2,0), dtype=torch.long))
+            return GraphData(x=x, edge_index=torch.empty((2,0), dtype=torch.long), num_nodes=0)
         # Get CE symbols and CSMs
         site_ces = len(features.sites.elements)*[NumGeometries]
         site_csm = len(features.sites.elements)*[0.0]
@@ -68,8 +70,8 @@ class CENData(GenericDataset):
             # Consider only the first CE symbol
             site_ces[j] = ce['ce_symbols'][0]
             site_csm[j] = ce['csms'][0]
-        # List of CE pair graphs
-        r = []
+        # Global node index
+        i = 0
         # Construct CE graphs
         for nb in features.ce_neighbors:
             l = len(nb['ligand_indices'])
@@ -77,25 +79,19 @@ class CENData(GenericDataset):
                 # Get site indices
                 idx = [ nb['site'], nb['site_to'] ] + nb['ligand_indices']
                 # Construct graph
-                x = {
-                    'elements'  : torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long),
-                    'oxidations': torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long),
-                    'ces'       : torch.tensor([ site_ces[site]                  for site in idx ], dtype=torch.long),
-                    'csm'       : torch.tensor([ site_csm[site]                  for site in idx ], dtype=torch.float),
-                    'angles'    : torch.tensor([ 0.0 + 0.0 ] + nb['angles'], dtype=torch.float),
-                    #'distance'  : torch.tensor(nb['distance'], dtype=torch.float),
-                }
-                e = [[], []]
-                for j, k in enumerate(nb['ligand_indices']):
+                x['elements'  ] = torch.cat((x['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)))
+                x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
+
+                for j, _ in enumerate(nb['ligand_indices']):
                     # From          ; To
-                    e[0].append(  0); e[1].append(j+2)
-                    e[0].append(j+2); e[1].append(  0)
-                    e[0].append(  1); e[1].append(j+2)
-                    e[0].append(j+2); e[1].append(  1)
+                    e[0].append(i    ); e[1].append(i+2+j)
+                    e[0].append(i+2+j); e[1].append(i    )
+                    e[0].append(i+1  ); e[1].append(i+2+j)
+                    e[0].append(i+2+j); e[1].append(i+1  )
 
-                r.append(GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long)))
+                i += 2+len(nb['ligand_indices'])
 
-        return InMemoryDataset.collate(r)[0]
+        return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
 
     @classmethod
     def __compute_graphs__(cls, cofe_list : list[CoordinationFeatures], verbose = False) -> list[GraphData]:
