@@ -85,7 +85,7 @@ class CENData(GenericDataset):
                 x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long)))
 
                 for j, _ in enumerate(nb['ligand_indices']):
-                    # From          ; To
+                    # From            ; To
                     e[0].append(i    ); e[1].append(i+2+j)
                     e[0].append(i+2+j); e[1].append(i    )
                     e[0].append(i+1  ); e[1].append(i+2+j)
