@@ -65,9 +65,10 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
     def forward(self, x_input):
 
-        x_elements = self.embedding_element(x_input.graphs.x['elements'])
+        x_elements = self.embedding_element(x_input.x['elements'])
+        edge_index = x_input.edge_index
 
-        x = self.layers(x_elements, x_input.graphs.edge_index, None)
+        x = self.layers(x_elements, edge_index, None)
         x = self.dense(x)
 
         return x

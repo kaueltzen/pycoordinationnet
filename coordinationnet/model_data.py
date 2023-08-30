@@ -26,33 +26,12 @@ from .features_datatypes import CoordinationFeatures
 
 ## ----------------------------------------------------------------------------
 
-class CoordinationFeaturesData(torch.utils.data.Dataset):
+class GenericDataset(torch.utils.data.Dataset):
 
-    def __init__(self, X : list[Any], y = None, verbose = False) -> None:
+    def __init__(self, X : list[Any], y = None) -> None:
 
-        if not (isinstance(X, list) or isinstance(X, np.ndarray)):
-            raise ValueError(f'X must be of type list or numpy array, but got type {type(X)}')
-
-        if y is None:
-            self.y = len(X)*[None]
-        else:
-            if isinstance(y, torch.Tensor):
-                self.y = y
-            else:
-                self.y = torch.tensor(y)
-
-        self.X = np.array(X)
-
-        for i, item in enumerate(self.X):
-            if   isinstance(item, Structure):
-                if verbose:
-                    print(f'Featurizing structure {i+1}/{len(X)}')
-                self.X[i] = CoordinationFeatures.from_structure(item, encode=True)
-            elif isinstance(item, CoordinationFeatures):
-                if not item.encoded:
-                    self.X[i] = item.encode()
-            else:
-                raise ValueError(f'Items in X must be of type CoordinationFeatures or Structure, but item {i} is of type {type(item)}')
+        self.X = X
+        self.y = y
 
     def __len__(self) -> int:
         return len(self.X)
@@ -63,7 +42,7 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
         return self.X[index], self.y[index]
 
     @classmethod
-    def load(cls, filename : str) -> 'CoordinationFeaturesData':
+    def load(cls, filename : str):
 
         with open(filename, 'rb') as f:
             data = dill.load(f)
@@ -71,16 +50,40 @@ class CoordinationFeaturesData(torch.utils.data.Dataset):
         if not isinstance(data, cls):
             raise ValueError(f'file {filename} contains incorrect data class {type(data)}')
 
-        # For backward compatibility
-        if isinstance(data.X, list):
-            data.X = np.array(data.X)
-
         return data
 
     def save(self, filename : str) -> None:
 
         with open(filename, 'wb') as f:
             dill.dump(self, f)
+
+## ----------------------------------------------------------------------------
+
+class CoordinationFeaturesData(GenericDataset):
+
+    def __init__(self, X : list[Any], y = None, verbose = False) -> None:
+
+        if not (isinstance(X, list) or isinstance(X, np.ndarray)):
+            raise ValueError(f'X must be of type list or numpy array, but got type {type(X)}')
+
+        if y is None:
+            y = len(X)*[None]
+        else:
+            if not isinstance(y, torch.Tensor):
+                y = torch.tensor(y)
+
+        for i, item in enumerate(X):
+            if   isinstance(item, Structure):
+                if verbose:
+                    print(f'Featurizing structure {i+1}/{len(X)}')
+                X[i] = CoordinationFeatures.from_structure(item, encode=True)
+            elif isinstance(item, CoordinationFeatures):
+                if not item.encoded:
+                    X[i] = item.encode()
+            else:
+                raise ValueError(f'Items in X must be of type CoordinationFeatures or Structure, but item {i} is of type {type(item)}')
+
+        super().__init__(X, y)
 
 ## ----------------------------------------------------------------------------
 
