@@ -88,7 +88,9 @@ class BatchCENGraph(Batch):
                     r.append(
                         GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long)))
 
-        return InMemoryDataset.collate(r)[0]
+        r = InMemoryDataset.collate(r)
+
+        return r[0]
 
     @classmethod
     def __compute_m_and_p__(cls, cofe_list : list[CoordinationFeatures]) -> tuple[int, int]:

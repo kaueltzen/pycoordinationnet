@@ -50,12 +50,12 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.embedding_ligands = ElementEmbedder(edim, from_pretrained=True, freeze=False)
         self.embedding_ces     = torch.nn.Embedding(NumGeometries+1, edim)
 
-        self.layers = Sequential('x, edge_index', [
+        self.layers = Sequential('x, edge_index, batch', [
                 (GCNConv(edim, edim), 'x, edge_index -> x'),
                 torch.nn.ELU(inplace=True),
                 (GCNConv(edim, edim), 'x, edge_index -> x'),
                 torch.nn.ELU(inplace=True),
-                #(global_mean_pool, 'x -> x'),
+                (global_mean_pool, 'x, batch -> x'),
             ])
 
         # Final dense layer
@@ -67,12 +67,8 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         x_elements = self.embedding_element(x_input.graphs.x['elements'])
 
-        x = self.layers(x_elements, x_input.graphs.edge_index)
+        x = self.layers(x_elements, x_input.graphs.edge_index, None)
         x = self.dense(x)
-
-        print(x)
-
-        raise ValueError('')
 
         return x
 

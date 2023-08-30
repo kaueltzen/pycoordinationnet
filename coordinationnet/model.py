@@ -41,7 +41,7 @@ class LitCoordinationFeaturesData(LitDataset):
 
     # Custom method to create a data loader
     def get_dataloader(self, data):
-        return CoordinationFeaturesLoader(data, num_workers = self.num_workers)
+        return CoordinationFeaturesLoader(data, batch_size = self.batch_size, num_workers = self.num_workers)
 
 ## ----------------------------------------------------------------------------
 
@@ -165,7 +165,7 @@ class LitGraphCoordinationFeaturesData(LitDataset):
 
     # Custom method to create a data loader
     def get_dataloader(self, data):
-        return GraphCoordinationFeaturesLoader(data, num_workers = self.num_workers)
+        return GraphCoordinationFeaturesLoader(data, batch_size = self.batch_size, num_workers = self.num_workers)
 
 ## ----------------------------------------------------------------------------
 
