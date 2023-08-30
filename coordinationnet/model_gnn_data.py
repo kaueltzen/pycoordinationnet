@@ -44,19 +44,20 @@ class CENData(GenericDataset):
 
     @classmethod
     def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
+        # Initialize graph with isolated nodes for each site
         x = {
-            'elements'  : torch.empty((0,), dtype=torch.long),
-            'oxidations': torch.empty((0,), dtype=torch.long),
-            #'ces'       : torch.empty((0,), dtype=torch.long),
-            #'csm'       : torch.empty((0,), dtype=torch.float),
-            #'angles'    : torch.empty((0,), dtype=torch.float),
-            #'distance'  : torch.empty((0,), dtype=torch.float),
+            'elements'  : torch.tensor(features.sites.elements  , dtype=torch.long),
+            'oxidations': torch.tensor(features.sites.oxidations, dtype=torch.long),
         }
-        # Global edge index
-        e = [[], []]
+        # Global edge index, initialize with self-connections for
+        # isolated nodes
+        e = [[ i for i, _ in enumerate(features.sites.elements) ],
+             [ i for i, _ in enumerate(features.sites.elements) ]]
+        # Global node index
+        i = len(features.sites.elements)
         # Some materials do not have CE pairs
         if len(features.ce_neighbors) == 0:
-            return GraphData(x=x, edge_index=torch.empty((2,0), dtype=torch.long), num_nodes=0)
+            return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
         # Get CE symbols and CSMs
         site_ces = len(features.sites.elements)*[NumGeometries]
         site_csm = len(features.sites.elements)*[0.0]
@@ -70,8 +71,6 @@ class CENData(GenericDataset):
             # Consider only the first CE symbol
             site_ces[j] = ce['ce_symbols'][0]
             site_csm[j] = ce['csms'][0]
-        # Global node index
-        i = 0
         # Construct CE graphs
         for nb in features.ce_neighbors:
             l = len(nb['ligand_indices'])
