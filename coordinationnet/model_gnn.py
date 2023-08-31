@@ -75,7 +75,6 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         x_elements   = self.embedding_element  (x_input.x['elements'  ])
         x_oxidations = self.embedding_oxidation(x_input.x['oxidations'])
         x_geometries = self.embedding_geometry (x_input.x['geometries'])
-        x_geometries = self.embedding_geometry (x_input.x['geometries'])
         x_angles     = x_input.x['angles']
 
         # Concatenate embeddings to yield a single feature vector per node
