@@ -40,7 +40,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         print(f'{model_config}')
 
         # Dimension of the graph features
-        fdim = 3*edim
+        fdim = edim + 10 + 10 + 2
 
         # The model config determines which components of the model
         # are active
@@ -49,10 +49,11 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.scaler_outputs    = TorchStandardScaler(layers[-1])
 
         # Embeddings
-        self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=False)
-        self.embedding_oxidation = torch.nn.Embedding(NumOxidations, edim)
-        self.embedding_geometry  = PaddedEmbedder(NumGeometries, edim)
+        self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=True)
+        self.embedding_oxidation = torch.nn.Embedding(NumOxidations, 10)
+        self.embedding_geometry  = PaddedEmbedder(NumGeometries, 10)
 
+        # Core graph network
         self.layers = Sequential('x, edge_index, batch', [
                 (GCNConv(fdim, fdim), 'x, edge_index -> x'),
                 torch.nn.ELU(inplace=True),
@@ -74,9 +75,11 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         x_elements   = self.embedding_element  (x_input.x['elements'  ])
         x_oxidations = self.embedding_oxidation(x_input.x['oxidations'])
         x_geometries = self.embedding_geometry (x_input.x['geometries'])
+        x_geometries = self.embedding_geometry (x_input.x['geometries'])
+        x_angles     = x_input.x['angles']
 
         # Concatenate embeddings to yield a single feature vector per node
-        x = torch.cat((x_elements, x_oxidations, x_geometries), dim=1)
+        x = torch.cat((x_elements, x_oxidations, x_geometries, x_angles), dim=1)
 
         # Propagate features through graph network
         x = self.layers(x, x_input.edge_index, x_input.batch)

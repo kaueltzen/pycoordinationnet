@@ -31,6 +31,16 @@ from .model_data      import GenericDataset, Batch
 
 ## ----------------------------------------------------------------------------
 
+def code_angles(angles : list[float]) -> torch.Tensor:
+    angles = torch.tensor(2*[torch.nan] + angles, dtype=torch.float) / 180 * 2*torch.pi
+    angles = torch.stack((torch.sin(angles), torch.cos(angles)), dim=1)
+    # Site `from' and site `to' angles
+    angles[0,:] = 0
+    angles[1,:] = 0
+    return angles
+
+## ----------------------------------------------------------------------------
+
 class CENData(GenericDataset):
 
     def __init__(self, dataset) -> None:
@@ -50,6 +60,7 @@ class CENData(GenericDataset):
             'elements'  : torch.tensor(features.sites.elements  , dtype=torch.long),
             'oxidations': torch.tensor(features.sites.oxidations, dtype=torch.long),
             'geometries': torch.tensor(nsites*[NumGeometries]   , dtype=torch.long),
+            'angles'    : torch.tensor(nsites*[[0.0, 0.0]]      , dtype=torch.float),
         }
         # Global edge index, initialize with self-connections for
         # isolated nodes
@@ -83,6 +94,7 @@ class CENData(GenericDataset):
                 x['elements'  ] = torch.cat((x['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)))
                 x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
                 x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long)))
+                x['angles'    ] = torch.cat((x['angles'    ], code_angles(nb['angles'])))
 
                 for j, _ in enumerate(nb['ligand_indices']):
                     # From            ; To
