@@ -14,6 +14,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ## ----------------------------------------------------------------------------
 
+import math
 import torch
 
 from tqdm import tqdm
@@ -39,6 +40,10 @@ def code_angles(angles : list[float]) -> torch.Tensor:
     angles[1,:] = 0
     return angles
 
+def code_csm(csm) -> list[float]:
+    # According to specs, CSM is a value between 0 and 100
+    return [ math.sin(csm / 100 * 2*math.pi), math.cos(csm / 100 * 2*math.pi) ]
+
 ## ----------------------------------------------------------------------------
 
 class CENData(GenericDataset):
@@ -60,6 +65,7 @@ class CENData(GenericDataset):
             'elements'  : torch.tensor(features.sites.elements  , dtype=torch.long),
             'oxidations': torch.tensor(features.sites.oxidations, dtype=torch.long),
             'geometries': torch.tensor(nsites*[NumGeometries]   , dtype=torch.long),
+            'csms'      : torch.tensor(nsites*[[0.0, 0.0]]      , dtype=torch.float),
             'angles'    : torch.tensor(nsites*[[0.0, 0.0]]      , dtype=torch.float),
         }
         # Global edge index, initialize with self-connections for
@@ -73,7 +79,7 @@ class CENData(GenericDataset):
             return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
         # Get CE symbols and CSMs
         site_ces = nsites*[NumGeometries]
-        site_csm = nsites*[0.0]
+        site_csm = nsites*[[0.0, 0.0]]
         # Each site may have multiple CEs, but in almost all cases a site fits only one CE.
         # Some sites (anions) do not have any site information, where we use the value
         # `NumGeometries`. Note that this value is also used for padding, but the mask
@@ -83,7 +89,7 @@ class CENData(GenericDataset):
             j = ce['site']
             # Consider only the first CE symbol
             site_ces[j] = ce['ce_symbols'][0]
-            site_csm[j] = ce['csms'][0]
+            site_csm[j] = code_csm(ce['csms'][0])
         # Construct CE graphs
         for nb in features.ce_neighbors:
             l = len(nb['ligand_indices'])
@@ -94,6 +100,7 @@ class CENData(GenericDataset):
                 x['elements'  ] = torch.cat((x['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)))
                 x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
                 x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long)))
+                x['csms'      ] = torch.cat((x['csms'      ], torch.tensor([ site_csm[site] for site in idx ], dtype=torch.float)))
                 x['angles'    ] = torch.cat((x['angles'    ], code_angles(nb['angles'])))
 
                 for j, _ in enumerate(nb['ligand_indices']):
