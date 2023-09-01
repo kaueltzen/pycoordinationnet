@@ -40,13 +40,16 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         print(f'{model_config}')
 
         # Dimension of the graph features
-        fdim = edim + 10 + 10 + 2 + 2
+        fdim = edim + 10 + 10 + 3*40
 
         # The model config determines which components of the model
         # are active
-        self.model_config      = model_config
+        self.model_config        = model_config
         # Optional scaler of model outputs (predictions)
-        self.scaler_outputs    = TorchStandardScaler(layers[-1])
+        self.scaler_outputs      = TorchStandardScaler(layers[-1])
+
+        # RBF encoder
+        self.rbf                 = RBFLayer(0.0, 1.0, bins=40)
 
         # Embeddings
         self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=True)
@@ -75,11 +78,13 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         x_elements   = self.embedding_element  (x_input.x['elements'  ])
         x_oxidations = self.embedding_oxidation(x_input.x['oxidations'])
         x_geometries = self.embedding_geometry (x_input.x['geometries'])
-        x_csms       = x_input.x['csms']
-        x_angles     = x_input.x['angles']
+
+        x_csms       = self.rbf(x_input.x['csms'     ])
+        x_distances  = self.rbf(x_input.x['distances'])
+        x_angles     = self.rbf(x_input.x['angles'   ])
 
         # Concatenate embeddings to yield a single feature vector per node
-        x = torch.cat((x_elements, x_oxidations, x_geometries, x_csms, x_angles), dim=1)
+        x = torch.cat((x_elements, x_oxidations, x_geometries, x_csms, x_distances, x_angles), dim=1)
 
         # Propagate features through graph network
         x = self.layers(x, x_input.edge_index, x_input.batch)

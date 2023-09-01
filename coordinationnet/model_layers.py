@@ -14,6 +14,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ## ----------------------------------------------------------------------------
 
+import math
 import numpy  as np
 import pandas as pd
 import torch
@@ -134,22 +135,18 @@ class ModelDense(torch.nn.Module):
 ## ----------------------------------------------------------------------------
 
 class RBFLayer(torch.nn.Module):
-    def __init__(self, start, stop, dim = 10, dim_out = 10):
+    def __init__(self, vmin : float, vmax : float, bins : int = 40, gamma : float = None):
         super().__init__()
-        self.linear = torch.nn.Linear(1, dim)
-        # We need a linear output layer, to prevent that this representation
-        # interferes with the information of other embeddings
-        self.linear_out = torch.nn.Linear(dim, dim_out)
-        self.linear.weight.requires_grad = False
-        self.linear.weight[:]            = 1
-        self.linear.bias.requires_grad   = False
-        self.linear.bias[:]              = -torch.arange(start, stop, (stop-start)/dim)
-        self.sigma = (stop-start)/dim
-
-    def forward(self, x):
-        x = torch.exp(-self.linear(x)**2/self.sigma)
-        x = self.linear_out(x)
-        return x
+        self.vmin = vmin
+        self.vmax = vmax
+        self.bins = bins
+        self.register_buffer(
+            "centers", torch.linspace(self.vmin, self.vmax, self.bins)
+        )
+        self.gamma = bins/math.fabs(vmax-vmin) if gamma is None else gamma
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = -self.gamma * (x.unsqueeze(1) - self.centers) ** 2
+        return torch.exp(x)
 
 ## ----------------------------------------------------------------------------
 

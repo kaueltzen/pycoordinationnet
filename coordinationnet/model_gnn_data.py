@@ -32,17 +32,21 @@ from .model_data      import GenericDataset, Batch
 
 ## ----------------------------------------------------------------------------
 
-def code_angles(angles : list[float]) -> torch.Tensor:
-    angles = torch.tensor(2*[torch.nan] + angles, dtype=torch.float) / 180 * 2*torch.pi
-    angles = torch.stack((torch.sin(angles), torch.cos(angles)), dim=1)
-    # Site `from' and site `to' angles
-    angles[0,:] = 0
-    angles[1,:] = 0
-    return angles
-
 def code_csm(csm) -> list[float]:
     # According to specs, CSM is a value between 0 and 100
-    return [ math.sin(csm / 100 * 2*math.pi), math.cos(csm / 100 * 2*math.pi) ]
+    return csm / 100
+
+def code_distance(distance : float, l : int) -> torch.Tensor:
+    # Sites `from` and `to` get distance assigned, all ligands
+    # get inf
+    x = torch.tensor(2*[distance] + l*[math.inf], dtype=torch.float) / 8.0
+    return x
+
+def code_angles(angles : list[float]) -> torch.Tensor:
+    # Ligands get angle information, sites `from` and `to`
+    # get inf
+    x = torch.tensor(2*[math.inf] + angles, dtype=torch.float) / 180
+    return x
 
 ## ----------------------------------------------------------------------------
 
@@ -65,8 +69,9 @@ class CENData(GenericDataset):
             'elements'  : torch.tensor(features.sites.elements  , dtype=torch.long),
             'oxidations': torch.tensor(features.sites.oxidations, dtype=torch.long),
             'geometries': torch.tensor(nsites*[NumGeometries]   , dtype=torch.long),
-            'csms'      : torch.tensor(nsites*[[0.0, 0.0]]      , dtype=torch.float),
-            'angles'    : torch.tensor(nsites*[[0.0, 0.0]]      , dtype=torch.float),
+            'csms'      : torch.tensor(nsites*[math.inf]        , dtype=torch.float),
+            'distances' : torch.tensor(nsites*[math.inf]        , dtype=torch.float),
+            'angles'    : torch.tensor(nsites*[math.inf]        , dtype=torch.float),
         }
         # Global edge index, initialize with self-connections for
         # isolated nodes
@@ -79,7 +84,7 @@ class CENData(GenericDataset):
             return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
         # Get CE symbols and CSMs
         site_ces = nsites*[NumGeometries]
-        site_csm = nsites*[[0.0, 0.0]]
+        site_csm = nsites*[math.inf]
         # Each site may have multiple CEs, but in almost all cases a site fits only one CE.
         # Some sites (anions) do not have any site information, where we use the value
         # `NumGeometries`. Note that this value is also used for padding, but the mask
@@ -101,7 +106,8 @@ class CENData(GenericDataset):
                 x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
                 x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long)))
                 x['csms'      ] = torch.cat((x['csms'      ], torch.tensor([ site_csm[site] for site in idx ], dtype=torch.float)))
-                x['angles'    ] = torch.cat((x['angles'    ], code_angles(nb['angles'])))
+                x['distances' ] = torch.cat((x['distances' ], code_distance(nb['distance'], l)))
+                x['angles'    ] = torch.cat((x['angles'    ], code_angles  (nb['angles'  ]   )))
 
                 for j, _ in enumerate(nb['ligand_indices']):
                     # From            ; To
