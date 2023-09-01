@@ -144,9 +144,10 @@ class RBFLayer(torch.nn.Module):
             "centers", torch.linspace(self.vmin, self.vmax, self.bins)
         )
         self.gamma = bins/math.fabs(vmax-vmin) if gamma is None else gamma
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = -self.gamma * (x.unsqueeze(1) - self.centers) ** 2
-        return torch.exp(x)
+        x = self.gamma*(x.unsqueeze(1) - self.centers) ** 2
+        return torch.exp(-x)
 
 ## ----------------------------------------------------------------------------
 
