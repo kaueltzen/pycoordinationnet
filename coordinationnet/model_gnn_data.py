@@ -87,8 +87,7 @@ class CENData(GenericDataset):
         site_csm = nsites*[math.inf]
         # Each site may have multiple CEs, but in almost all cases a site fits only one CE.
         # Some sites (anions) do not have any site information, where we use the value
-        # `NumGeometries`. Note that this value is also used for padding, but the mask
-        # prevents the transformer to attend to padded values
+        # `NumGeometries`
         for ce in features.ces:
             # Get site index
             j = ce['site']
@@ -104,7 +103,7 @@ class CENData(GenericDataset):
                 # Construct graph
                 x['elements'  ] = torch.cat((x['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)))
                 x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
-                x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long)))
+                x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long )))
                 x['csms'      ] = torch.cat((x['csms'      ], torch.tensor([ site_csm[site] for site in idx ], dtype=torch.float)))
                 x['distances' ] = torch.cat((x['distances' ], code_distance(nb['distance'], l)))
                 x['angles'    ] = torch.cat((x['angles'    ], code_angles  (nb['angles'  ]   )))
