@@ -136,7 +136,7 @@ class CENData(GenericDataset):
                 for j, _ in enumerate(nb['ligand_indices']):
                     # From ligand     ; To CE
                     e1[0].append(i2+j); e1[1].append(i1+0)
-                    e1[0].append(i2+j); e1[1].append(i2+1)
+                    e1[0].append(i2+j); e1[1].append(i1+1)
                     # From CE         ; To ligand
                     e2[0].append(i1+0); e2[1].append(i2+j)
                     e2[0].append(i1+1); e2[1].append(i2+j)
