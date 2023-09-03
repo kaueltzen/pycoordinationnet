@@ -17,7 +17,7 @@
 import torch
 
 from torch_geometric.data import Data
-from torch_geometric.nn   import Sequential, GCNConv, global_mean_pool
+from torch_geometric.nn   import Sequential, GraphConv, HeteroConv, global_mean_pool
 
 from .features_coding import NumOxidations, NumGeometries
 
@@ -39,8 +39,17 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         print(f'{model_config}')
 
-        # Dimension of the graph features
-        fdim = edim + 10 + 10 + 3*40
+        # Feature dimensions
+        dim_element   = edim
+        dim_oxidation = 10
+        dim_geometry  = 10
+        dim_csm       = 40
+        dim_distance  = 40
+        dim_angle     = 40
+
+        dim_site   = dim_element + dim_oxidation
+        dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm + dim_distance
+        dim_ligand = dim_element + dim_oxidation + dim_angle
 
         # The model config determines which components of the model
         # are active
@@ -56,38 +65,64 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.embedding_oxidation = torch.nn.Embedding(NumOxidations, 10)
         self.embedding_geometry  = PaddedEmbedder(NumGeometries, 10)
 
+        self.activation          = torch.nn.ELU(inplace=True)
+
         # Core graph network
         self.layers = Sequential('x, edge_index, batch', [
-                (GCNConv(fdim, fdim), 'x, edge_index -> x'),
-                torch.nn.ELU(inplace=True),
-                (GCNConv(fdim, fdim), 'x, edge_index -> x'),
-                torch.nn.ELU(inplace=True),
-                (GCNConv(fdim, fdim), 'x, edge_index -> x'),
-                torch.nn.ELU(inplace=True),
-                (global_mean_pool, 'x, batch -> x'),
+                # Graph convolutions
+                (HeteroConv({
+                    ('site', '*', 'site'): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
+                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=False),
+                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=False),
+                }), 'x, edge_index -> x'),
+                # Apply activation
+                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                # Graph convolutions
+                (HeteroConv({
+                    ('site', '*', 'site'): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
+                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=False),
+                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=False),
+                }), 'x, edge_index -> x'),
+                # Apply activation
+                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                # Apply mean pooling
+                (lambda x, batch: { k : global_mean_pool(v, batch[k]) for k, v in x.items() }, 'x, batch -> x'),
+                # Concatenate selected features
+                (lambda x: torch.cat([x['site'], x['ce']], dim=1), 'x -> x')
             ])
 
         # Final dense layer
-        self.dense = ModelDense([fdim] + layers, **kwargs)
+        self.dense = ModelDense([dim_site + dim_ce] + layers, **kwargs)
 
         print(f'Creating a GNN model with {self.n_parameters:,} parameters')
 
     def forward(self, x_input):
 
-        # Get embeddings of various features
-        x_elements   = self.embedding_element  (x_input.x['elements'  ])
-        x_oxidations = self.embedding_oxidation(x_input.x['oxidations'])
-        x_geometries = self.embedding_geometry (x_input.x['geometries'])
+        x_site = torch.cat((
+            self.embedding_element  (x_input['site'].x['elements'  ]),
+            self.embedding_oxidation(x_input['site'].x['oxidations']),
+            ), dim=1)
 
-        x_csms       = self.rbf(x_input.x['csms'     ])
-        x_distances  = self.rbf(x_input.x['distances'])
-        x_angles     = self.rbf(x_input.x['angles'   ])
+        x_ce = torch.cat((
+            self.embedding_element  (x_input['ce'].x['elements'  ]),
+            self.embedding_oxidation(x_input['ce'].x['oxidations']),
+            self.embedding_geometry (x_input['ce'].x['geometries']),
+            self.rbf                (x_input['ce'].x['distances' ]),
+            self.rbf                (x_input['ce'].x['csms'      ]),
+            ), dim=1)
+
+        x_ligand = torch.cat((
+            self.embedding_element  (x_input['ligand'].x['elements'  ]),
+            self.embedding_oxidation(x_input['ligand'].x['oxidations']),
+            self.rbf                (x_input['ligand'].x['angles'    ]),
+            ), dim=1)
 
         # Concatenate embeddings to yield a single feature vector per node
-        x = torch.cat((x_elements, x_oxidations, x_geometries, x_csms, x_distances, x_angles), dim=1)
-
+        x = {
+            'site': x_site, 'ce': x_ce, 'ligand': x_ligand,
+        }
         # Propagate features through graph network
-        x = self.layers(x, x_input.edge_index, x_input.batch)
+        x = self.layers(x, x_input.edge_index_dict, x_input.batch_dict)
         # Apply final dense layer
         x = self.dense(x)
 

@@ -301,7 +301,7 @@ class LitModel(pl.LightningModule):
         # Send metrics to progress bar. We also don't want results
         # logged at every step, but let the logger accumulate the
         # results at the end of every epoch
-        self.log(f'train_loss', loss.item(), prog_bar=True, on_step=False, on_epoch=True)
+        self.log(f'train_loss', loss.item(), prog_bar=True, on_step=False, on_epoch=True, batch_size=y_batch.shape[0])
         # Return whatever we might need in callbacks. Lightning automtically minimizes
         # the item called 'loss', which must be present in the returned dictionary
         return {'loss': loss}
@@ -316,7 +316,7 @@ class LitModel(pl.LightningModule):
         # Send metrics to progress bar. We also don't want results
         # logged at every step, but let the logger accumulate the
         # results at the end of every epoch
-        self.log('val_loss', loss.item(), prog_bar=True, on_step=False, on_epoch=True)
+        self.log('val_loss', loss.item(), prog_bar=True, on_step=False, on_epoch=True, batch_size=y_batch.shape[0])
         # Return whatever we might need in callbacks
         return {'val_loss': loss}
 
@@ -328,7 +328,7 @@ class LitModel(pl.LightningModule):
         y_hat = self.model(X_batch)
         loss  = self.loss(y_hat, y_batch)
         # Log whatever we want to aggregate later
-        self.log('test_loss', loss)
+        self.log('test_loss', loss, batch_size=y_batch.shape[0])
         # Return whatever we might need in callbacks
         return {'y': y_batch, 'y_hat': y_hat, 'test_loss': loss}
 

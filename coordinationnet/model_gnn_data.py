@@ -20,6 +20,7 @@ import torch
 from tqdm import tqdm
 
 from torch_geometric.data   import InMemoryDataset
+from torch_geometric.data   import HeteroData
 from torch_geometric.data   import Data       as GraphData
 from torch_geometric.data   import Batch      as GraphBatch
 from torch_geometric.loader import DataLoader as GraphDataLoader
@@ -32,20 +33,20 @@ from .model_data      import GenericDataset, Batch
 
 ## ----------------------------------------------------------------------------
 
-def code_csm(csm) -> list[float]:
+def code_csms(csms) -> list[float]:
     # According to specs, CSM is a value between 0 and 100
-    return csm / 100
+    return torch.tensor(csms, dtype=torch.float) / 100
 
 def code_distance(distance : float, l : int) -> torch.Tensor:
     # Sites `from` and `to` get distance assigned, all ligands
     # get inf
-    x = torch.tensor(2*[distance] + l*[math.inf], dtype=torch.float) / 8.0
+    x = torch.tensor(2*[distance], dtype=torch.float) / 8.0
     return x
 
 def code_angles(angles : list[float]) -> torch.Tensor:
     # Ligands get angle information, sites `from` and `to`
     # get inf
-    x = torch.tensor(2*[math.inf] + angles, dtype=torch.float) / 180
+    x = torch.tensor(angles, dtype=torch.float) / 180
     return x
 
 ## ----------------------------------------------------------------------------
@@ -62,26 +63,27 @@ class CENData(GenericDataset):
         super().__init__(X, y)
 
     @classmethod
-    def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
+    def __compute_graph_sites__(cls, features : CoordinationFeatures, data : HeteroData) -> None:
+        # Number of nodes in this graph
         nsites = len(features.sites.elements)
+        # Explicitly set the number of nodes
+        data['site'].num_nodes = nsites
         # Initialize graph with isolated nodes for each site
-        x = {
+        data['site'].x = {
             'elements'  : torch.tensor(features.sites.elements  , dtype=torch.long),
             'oxidations': torch.tensor(features.sites.oxidations, dtype=torch.long),
-            'geometries': torch.tensor(nsites*[NumGeometries]   , dtype=torch.long),
-            'csms'      : torch.tensor(nsites*[math.inf]        , dtype=torch.float),
-            'distances' : torch.tensor(nsites*[math.inf]        , dtype=torch.float),
-            'angles'    : torch.tensor(nsites*[math.inf]        , dtype=torch.float),
         }
         # Global edge index, initialize with self-connections for
         # isolated nodes
-        e = [[ i for i in range(nsites) ],
-             [ i for i in range(nsites) ]]
-        # Global node index
-        i = len(features.sites.elements)
-        # Some materials do not have CE pairs
-        if len(features.ce_neighbors) == 0:
-            return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
+        data['site', '*', 'site'].edge_index = torch.tensor(
+            [[ i for i in range(nsites) ],
+             [ i for i in range(nsites) ]],
+             dtype=torch.long)
+
+    @classmethod
+    def __compute_graph_ce_pairs__(cls, features : CoordinationFeatures, data : HeteroData) -> None:
+        # Number of nodes in this graph
+        nsites = len(features.sites.elements)
         # Get CE symbols and CSMs
         site_ces = nsites*[NumGeometries]
         site_csm = nsites*[math.inf]
@@ -93,31 +95,75 @@ class CENData(GenericDataset):
             j = ce['site']
             # Consider only the first CE symbol
             site_ces[j] = ce['ce_symbols'][0]
-            site_csm[j] = code_csm(ce['csms'][0])
+            site_csm[j] = ce['csms'][0]
+        # Initial node features
+        x_ce = {
+            'elements'  : torch.tensor([], dtype=torch.long),
+            'oxidations': torch.tensor([], dtype=torch.long),
+            'geometries': torch.tensor([], dtype=torch.long),
+            'csms'      : torch.tensor([], dtype=torch.float),
+            'distances' : torch.tensor([], dtype=torch.float),
+        }
+        x_ligand = {
+            'elements'  : torch.tensor([], dtype=torch.long),
+            'oxidations': torch.tensor([], dtype=torch.long),
+            'angles'    : torch.tensor([], dtype=torch.float),
+        }
+        # Edges
+        e1 = [[], []]
+        e2 = [[], []]
+        # Global node index i
+        i1 = 0
+        i2 = 0
         # Construct CE graphs
         for nb in features.ce_neighbors:
             l = len(nb['ligand_indices'])
             if l > 0:
                 # Get site indices
-                idx = [ nb['site'], nb['site_to'] ] + nb['ligand_indices']
-                # Construct graph
-                x['elements'  ] = torch.cat((x['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx ], dtype=torch.long)))
-                x['oxidations'] = torch.cat((x['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx ], dtype=torch.long)))
-                x['geometries'] = torch.cat((x['geometries'], torch.tensor([ site_ces[site] for site in idx ], dtype=torch.long )))
-                x['csms'      ] = torch.cat((x['csms'      ], torch.tensor([ site_csm[site] for site in idx ], dtype=torch.float)))
-                x['distances' ] = torch.cat((x['distances' ], code_distance(nb['distance'], l)))
-                x['angles'    ] = torch.cat((x['angles'    ], code_angles  (nb['angles'  ]   )))
+                idx_ce     = [ nb['site'], nb['site_to'] ]
+                idx_ligand = nb['ligand_indices']
+                # Construct CE features
+                x_ce['elements'  ] = torch.cat((x_ce['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx_ce ], dtype=torch.long)))
+                x_ce['oxidations'] = torch.cat((x_ce['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx_ce ], dtype=torch.long)))
+                x_ce['geometries'] = torch.cat((x_ce['geometries'], torch.tensor([ site_ces[site] for site in idx_ce ], dtype=torch.long )))
+                x_ce['distances' ] = torch.cat((x_ce['distances' ], code_distance(nb['distance'], l)))
+                x_ce['csms'      ] = torch.cat((x_ce['csms'      ], code_csms([ site_csm[site] for site in idx_ce ])))
+                # Construct ligand features
+                x_ligand['elements'  ] = torch.cat((x_ligand['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx_ligand ], dtype=torch.long)))
+                x_ligand['oxidations'] = torch.cat((x_ligand['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx_ligand ], dtype=torch.long)))
+                x_ligand['angles'    ] = torch.cat((x_ligand['angles'    ], code_angles(nb['angles'])))
 
                 for j, _ in enumerate(nb['ligand_indices']):
-                    # From            ; To
-                    e[0].append(i    ); e[1].append(i+2+j)
-                    e[0].append(i+2+j); e[1].append(i    )
-                    e[0].append(i+1  ); e[1].append(i+2+j)
-                    e[0].append(i+2+j); e[1].append(i+1  )
+                    # From ligand     ; To CE
+                    e1[0].append(i2+j); e1[1].append(i1+0)
+                    e1[0].append(i2+j); e1[1].append(i2+1)
+                    # From CE         ; To ligand
+                    e2[0].append(i1+0); e2[1].append(i2+j)
+                    e2[0].append(i1+1); e2[1].append(i2+j)
 
-                i += 2+len(nb['ligand_indices'])
+                i1 += 2
+                i2 += len(nb['ligand_indices'])
 
-        return GraphData(x=x, edge_index=torch.tensor(e, dtype=torch.long), num_nodes=i)
+        # Explicitly set the number of nodes
+        data['ce'    ].num_nodes = i1
+        data['ligand'].num_nodes = i2
+        # Assign features
+        data['ce'    ].x = x_ce
+        data['ligand'].x = x_ligand
+        # Assign edges
+        data['ligand', '*', 'ce'].edge_index = torch.tensor(e1, dtype=torch.long)
+        data['ce', '*', 'ligand'].edge_index = torch.tensor(e2, dtype=torch.long)
+
+    @classmethod
+    def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
+        # Initialize empty heterogeneous graph
+        data = HeteroData()
+        # Add individual sites
+        cls.__compute_graph_sites__(features, data)
+        # Add CE pairs
+        cls.__compute_graph_ce_pairs__(features, data)
+
+        return data
 
     @classmethod
     def __compute_graphs__(cls, cofe_list : list[CoordinationFeatures], verbose = False) -> list[GraphData]:
