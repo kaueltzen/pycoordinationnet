@@ -85,14 +85,20 @@ class ModelGraphCoordinationNet(torch.nn.Module):
                 }), 'x, edge_index -> x'),
                 # Apply activation
                 (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                # Graph convolutions
+                (HeteroConv({
+                    ('ce', '*', 'site'  ): GraphConv((dim_ce, dim_site  ), dim_site  , add_self_loops=False, bias=False),
+                }, aggr='mean'), 'x, edge_index -> x'),
+                # Apply activation
+                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
                 # Apply mean pooling
                 (lambda x, batch: { k : global_mean_pool(v, batch[k]) for k, v in x.items() }, 'x, batch -> x'),
-                # Concatenate selected features
-                (lambda x: torch.cat([x['site'], x['ce']], dim=1), 'x -> x')
+                # Extract only site features
+                (lambda x: x['site'], 'x -> x')
             ])
 
         # Final dense layer
-        self.dense = ModelDense([dim_site + dim_ce] + layers, **kwargs)
+        self.dense = ModelDense([dim_site] + layers, **kwargs)
 
         print(f'Creating a GNN model with {self.n_parameters:,} parameters')
 

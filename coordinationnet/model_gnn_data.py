@@ -112,6 +112,7 @@ class CENData(GenericDataset):
         # Edges
         e1 = [[], []]
         e2 = [[], []]
+        e3 = [[], []]
         # Global node index i
         i1 = 0
         i2 = 0
@@ -141,6 +142,10 @@ class CENData(GenericDataset):
                     e2[0].append(i1+0); e2[1].append(i2+j)
                     e2[0].append(i1+1); e2[1].append(i2+j)
 
+                # Connect CE nodes to site nodes
+                e3[0].append(i1+0); e3[1].append(nb['site'])
+                e3[0].append(i1+1); e3[1].append(nb['site_to'])
+
                 i1 += 2
                 i2 += len(nb['ligand_indices'])
 
@@ -153,6 +158,8 @@ class CENData(GenericDataset):
         # Assign edges
         data['ligand', '*', 'ce'].edge_index = torch.tensor(e1, dtype=torch.long)
         data['ce', '*', 'ligand'].edge_index = torch.tensor(e2, dtype=torch.long)
+        # Connect CE nodes to site nodes
+        data['ce', '*', 'site'].edge_index = torch.tensor(e3, dtype=torch.long)
 
     @classmethod
     def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
