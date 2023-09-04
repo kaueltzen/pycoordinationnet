@@ -54,9 +54,9 @@ class CoordinationNet:
 
         if self.lit_model.global_rank == 0:
 
-            print(f'{model_config}')
+            print(f'{self.lit_model.model.model_config}')
 
-            print(f'Creating a GNN model with {self.n_parameters:,} parameters')
+            print(f'Creating a GNN model with {self.lit_model.model.n_parameters:,} parameters')
 
     def fit_scaler(self, data : LitCoordinationFeaturesData):
         y = torch.cat([ y_batch for _, y_batch in data.get_dataloader(data.data) ])
