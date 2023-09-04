@@ -196,7 +196,7 @@ class LitModel(pl.LightningModule):
                  # Other hyperparameters
                  betas = (0.9, 0.95), factor = 0.8,
                  # Optimizer and scheduler selection
-                 scheduler = None, optimizer = 'Adam', optimizer_verbose = False, **kwargs):
+                 scheduler = None, optimizer = 'AdamW', optimizer_verbose = False, **kwargs):
         super().__init__()
         # Save all hyperparameters to `hparams` (e.g. lr)
         self.save_hyperparameters()

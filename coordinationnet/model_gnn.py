@@ -37,8 +37,6 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         super().__init__()
 
-        print(f'{model_config}')
-
         # Feature dimensions
         dim_element   = edim
         dim_oxidation = 10
@@ -99,8 +97,6 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         # Final dense layer
         self.dense = ModelDense([dim_site] + layers, **kwargs)
-
-        print(f'Creating a GNN model with {self.n_parameters:,} parameters')
 
     def forward(self, x_input):
 

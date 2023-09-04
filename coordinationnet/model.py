@@ -52,6 +52,12 @@ class CoordinationNet:
         self.lit_model  = LitModel(ModelCoordinationNet, **kwargs)
         self.cache_file = cache_file
 
+        if self.lit_model.global_rank == 0:
+
+            print(f'{model_config}')
+
+            print(f'Creating a GNN model with {self.n_parameters:,} parameters')
+
     def fit_scaler(self, data : LitCoordinationFeaturesData):
         y = torch.cat([ y_batch for _, y_batch in data.get_dataloader(data.data) ])
         self.lit_model.model.scaler_outputs.fit(y)
@@ -97,7 +103,8 @@ class CoordinationNet:
 
         for fold, (index_train, index_test) in enumerate(KFold(n_splits, shuffle = shuffle, random_state = random_state).split(data)):
 
-            print(f'Training fold {fold+1}/{n_splits}...')
+            if self.lit_model.global_rank == 0:
+                print(f'Training fold {fold+1}/{n_splits}...')
 
             data_train = torch.utils.data.Subset(data, index_train)
             data_test  = torch.utils.data.Subset(data, index_test )
@@ -112,7 +119,8 @@ class CoordinationNet:
             test_y, test_y_hat, _ = self.test(data_test)
 
             # Print score
-            print(f'Best validation score: {best_val_score}')
+            if self.lit_model.global_rank == 0:
+                print(f'Best validation score: {best_val_score}')
 
             # Save predictions for model evaluation
             y_hat = torch.cat((y_hat, test_y_hat))
@@ -175,6 +183,12 @@ class GraphCoordinationNet:
 
         self.lit_model = LitModel(ModelGraphCoordinationNet, **kwargs)
 
+        if self.lit_model.global_rank == 0:
+
+            print(f'{model_config}')
+
+            print(f'Creating a GNN model with {self.n_parameters:,} parameters')
+
     def fit_scaler(self, data : LitGraphCoordinationFeaturesData):
         y = torch.cat([ y_batch for _, y_batch in data.get_dataloader(data.data) ])
         self.lit_model.model.scaler_outputs.fit(y)
@@ -215,7 +229,8 @@ class GraphCoordinationNet:
 
         for fold, (index_train, index_test) in enumerate(KFold(n_splits, shuffle = shuffle, random_state = random_state).split(data)):
 
-            print(f'Training fold {fold+1}/{n_splits}...')
+            if self.lit_model.global_rank == 0:
+                print(f'Training fold {fold+1}/{n_splits}...')
 
             data_train = torch.utils.data.Subset(data, index_train)
             data_test  = torch.utils.data.Subset(data, index_test )
@@ -230,7 +245,8 @@ class GraphCoordinationNet:
             test_y, test_y_hat, _ = self.test(data_test)
 
             # Print score
-            print(f'Best validation score: {best_val_score}')
+            if self.lit_model.global_rank == 0:
+                print(f'Best validation score: {best_val_score}')
 
             # Save predictions for model evaluation
             y_hat = torch.cat((y_hat, test_y_hat))

@@ -438,8 +438,6 @@ class ModelCoordinationNet(torch.nn.Module):
 
         super().__init__()
 
-        print(f'{model_config}')
-
         # The model config determines which components of the model
         # are active
         self.model_config              = model_config
@@ -476,8 +474,6 @@ class ModelCoordinationNet(torch.nn.Module):
 
         # Final dense layer
         self.dense = ModelDense([dim_dense_in] + layers, **kwargs)
-
-        print(f'Creating a transformer model with {self.n_parameters:,} parameters')
 
     def _add_if_available_(self, x, y):
         if x is None:
