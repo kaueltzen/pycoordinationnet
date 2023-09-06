@@ -136,12 +136,13 @@ class LitVerboseOptimizer(torch.optim.Optimizer):
 ## ----------------------------------------------------------------------------
 
 class LitDataset(pl.LightningDataModule, ABC):
-    def __init__(self, data, val_size = 0.2, batch_size = 32, num_workers = 2):
+    def __init__(self, data, val_size = 0.2, batch_size = 32, num_workers = 2, seed = 42):
         super().__init__()
         self.num_workers  = num_workers
         self.val_size     = val_size
         self.batch_size   = batch_size
         self.data         = data
+        self.seed         = seed
 
     # This function is called by lightning trainer class with
     # the corresponding stage option
@@ -150,7 +151,8 @@ class LitDataset(pl.LightningDataModule, ABC):
         # Assign train/val datasets for use in dataloaders
         if stage == 'fit' or stage == None:
             # Take a piece of the training data for validation
-            self.data_train, self.data_val = torch.utils.data.random_split(self.data, [1.0 - self.val_size, self.val_size])
+            self.data_train, self.data_val = torch.utils.data.random_split(
+                self.data, [1.0 - self.val_size, self.val_size], generator=torch.Generator().manual_seed(self.seed))
 
         # Assign test dataset for use in dataloader(s)
         if stage == 'test' or stage == None:
@@ -196,7 +198,7 @@ class LitModel(pl.LightningModule):
                  # Other hyperparameters
                  betas = (0.9, 0.95), factor = 0.8,
                  # Optimizer and scheduler selection
-                 scheduler = None, optimizer = 'AdamW', optimizer_verbose = False, **kwargs):
+                 scheduler = None, optimizer = 'AdamW', optimizer_verbose = False, seed = 42, **kwargs):
         super().__init__()
         # Save all hyperparameters to `hparams` (e.g. lr)
         self.save_hyperparameters()
@@ -220,8 +222,10 @@ class LitModel(pl.LightningModule):
             'val_size'    : val_size,
             'batch_size'  : batch_size,
             'num_workers' : num_workers,
+            'seed'        : seed,
         }
-    
+        self._setup_trainer_()
+
     def configure_optimizers(self):
         # Get learning rates
         lr        = self.hparams['lr']
@@ -341,9 +345,6 @@ class LitModel(pl.LightningModule):
         self.trainer_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'train_loss', patience = self.trainer_options['patience_es'])
         self.trainer_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
 
-        if os.path.exists(self.trainer_options['default_root_dir']):
-            shutil.rmtree(self.trainer_options['default_root_dir'])
-
         # self.trainer is a pre-defined getter/setter in the LightningModule
         self.trainer = pl.Trainer(
             enable_checkpointing = True,
@@ -357,10 +358,6 @@ class LitModel(pl.LightningModule):
             callbacks            = [LitProgressBar(), self.trainer_early_stopping, self.trainer_checkpoint_callback, self.trainer_matric_tracker])
 
     def _train(self, data):
-
-        # We always need a new trainer for training the model
-        self._setup_trainer_()
-
         # Train model on train data. The fit method returns just None
         self.trainer.fit(self, data)
 
@@ -381,10 +378,6 @@ class LitModel(pl.LightningModule):
         return best_model, stats
 
     def _test(self, data):
-
-        # We always need a new trainer for testing the model
-        self._setup_trainer_()
-
         # Train model on train data. The test method returns accumulated
         # statistics sent to the logger
         stats = self.trainer.test(self, data)
@@ -398,10 +391,6 @@ class LitModel(pl.LightningModule):
         return y, y_hat, stats[0]
 
     def _predict(self, data):
-
-        # We always need a new trainer for testing the model
-        self._setup_trainer_()
-
         # Train model on train data. The test method returns accumulated
         # statistics sent to the logger
         return torch.cat(self.trainer.predict(self, data))

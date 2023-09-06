@@ -51,14 +51,14 @@ def code_angles(angles : list[float]) -> torch.Tensor:
 
 ## ----------------------------------------------------------------------------
 
-class CENData(GenericDataset):
+class GraphCoordinationData(GenericDataset):
 
-    def __init__(self, dataset) -> None:
+    def __init__(self, dataset, verbose = False) -> None:
 
         X = [ item[0] for item in dataset]
         y = [ item[1] for item in dataset]
 
-        X = self.__compute_graphs__(X, verbose=True)
+        X = self.__compute_graphs__(X, verbose=verbose)
 
         super().__init__(X, y)
 
@@ -188,8 +188,6 @@ class GraphCoordinationFeaturesLoader(torch.utils.data.DataLoader):
 
         if 'collate_fn' in kwargs:
             raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
-
-        dataset = CENData(dataset)
 
         super().__init__(dataset, collate_fn=self.collate_fn, **kwargs)
 
