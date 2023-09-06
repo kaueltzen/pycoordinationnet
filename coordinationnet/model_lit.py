@@ -200,6 +200,10 @@ class LitModel(pl.LightningModule):
                  # Optimizer and scheduler selection
                  scheduler = None, optimizer = 'AdamW', optimizer_verbose = False, seed = 42, **kwargs):
         super().__init__()
+
+        if type(strategy) is not str:
+            raise ValueError('Type of argument `strategy\' must be a string')
+
         # Save all hyperparameters to `hparams` (e.g. lr)
         self.save_hyperparameters()
         self.optimizer         = optimizer
@@ -224,7 +228,7 @@ class LitModel(pl.LightningModule):
             'num_workers' : num_workers,
             'seed'        : seed,
         }
-        self._setup_trainer_()
+        self.reset_trainer()
 
     def configure_optimizers(self):
         # Get learning rates
@@ -340,7 +344,7 @@ class LitModel(pl.LightningModule):
         """Prediction on a single batch"""
         return self.model(batch[0])
 
-    def _setup_trainer_(self):
+    def reset_trainer(self):
         self.trainer_matric_tracker      = LitMetricTracker()
         self.trainer_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'train_loss', patience = self.trainer_options['patience_es'])
         self.trainer_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')

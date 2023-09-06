@@ -254,6 +254,9 @@ class GraphCoordinationNet:
             y_hat = torch.cat((y_hat, test_y_hat))
             y     = torch.cat((y    , test_y    ))
 
+            # Reset trainer
+            self.lit_model.reset_trainer()
+
         # Reset model
         self.lit_model = initial_model
 
