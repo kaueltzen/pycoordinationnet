@@ -711,7 +711,7 @@ class BatchCoordinationFeatures(Batch):
 
 ## ----------------------------------------------------------------------------
 
-class BatchedCoordinationFeaturesData(torch.utils.data.Dataset):
+class BatchedTransformerCoordinationFeaturesData(torch.utils.data.Dataset):
     def __init__(self, dataset : CoordinationFeaturesData, model_config, batch_size : int, drop_last = False, cache_file = None, **kwargs) -> None:
 
         self.cache_file = cache_file
@@ -800,9 +800,9 @@ class BatchedCoordinationFeaturesData(torch.utils.data.Dataset):
 
 ## ----------------------------------------------------------------------------
 
-class CoordinationFeaturesLoader(torch.utils.data.DataLoader):
+class TransformerCoordinationFeaturesLoader(torch.utils.data.DataLoader):
 
-    def __init__(self, dataset : BatchedCoordinationFeaturesData, batch_size = 1, **kwargs) -> None:
+    def __init__(self, dataset : BatchedTransformerCoordinationFeaturesData, batch_size = 1, **kwargs) -> None:
         if 'collate_fn' in kwargs:
             raise TypeError(f'{self.__class__}.__init__() got an unexpected keyword argument \'collate_fn\'')
 
