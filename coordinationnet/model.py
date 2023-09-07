@@ -164,14 +164,22 @@ class CoordinationNet:
 ## ----------------------------------------------------------------------------
 
 class LitGraphCoordinationFeaturesData(LitDataset):
-    def __init__(self, data : CoordinationFeaturesData, val_size = 0.2, batch_size = 32, num_workers = 2, seed = 42, verbose = False):
+    def __init__(self, data : CoordinationFeaturesData, verbose = False, **kwargs):
 
-        data = GraphCoordinationData(data, verbose = verbose)
+        self.data_raw = data
 
-        super().__init__(data, val_size = val_size, batch_size = batch_size, num_workers = num_workers, seed = seed)
+        super().__init__(None, load_cached_data = 'dataset.dill', **kwargs)
+
+    def prepare_data(self):
+
+        data = GraphCoordinationData(self.data_raw, verbose = True)
+
+        with open(self.cache_path, 'wb') as f:
+            dill.dump(data, f)
 
     # Custom method to create a data loader
     def get_dataloader(self, data):
+
         return GraphCoordinationFeaturesLoader(data, batch_size = self.batch_size, num_workers = self.num_workers)
 
 ## ----------------------------------------------------------------------------
@@ -184,7 +192,7 @@ class GraphCoordinationNet:
 
     def fit_scaler(self, data : LitGraphCoordinationFeaturesData):
 
-        y = torch.cat([ y_batch for _, y_batch in data.get_dataloader(data.data) ])
+        y = torch.cat([ y_batch for _, y_batch in data.data_raw ])
 
         self.lit_model.model.scaler_outputs.fit(y)
 

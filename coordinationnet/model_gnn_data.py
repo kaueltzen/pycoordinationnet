@@ -192,6 +192,7 @@ class GraphCoordinationFeaturesLoader(torch.utils.data.DataLoader):
         super().__init__(dataset, collate_fn=self.collate_fn, **kwargs)
 
     def collate_fn(self, batch):
+
         x = [ item[0] for item in batch ]
         y = [ item[1] for item in batch ]
 

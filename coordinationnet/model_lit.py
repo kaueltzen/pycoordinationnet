@@ -14,6 +14,7 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ## ----------------------------------------------------------------------------
 
+import dill
 import shutil
 import torch
 import pytorch_lightning as pl
@@ -136,17 +137,34 @@ class LitVerboseOptimizer(torch.optim.Optimizer):
 ## ----------------------------------------------------------------------------
 
 class LitDataset(pl.LightningDataModule, ABC):
-    def __init__(self, data, val_size = 0.2, batch_size = 32, num_workers = 2, seed = 42):
+    def __init__(self, data, val_size = 0.2, batch_size = 32, num_workers = 2, default_root_dir = None, load_cached_data = None, seed = 42):
         super().__init__()
-        self.num_workers  = num_workers
-        self.val_size     = val_size
-        self.batch_size   = batch_size
-        self.data         = data
-        self.seed         = seed
+        self.num_workers      = num_workers
+        self.val_size         = val_size
+        self.batch_size       = batch_size
+        self.data             = data
+        self.default_root_dir = default_root_dir
+        self.load_cached_data = load_cached_data
+        self.seed             = seed
+
+    @property
+    def cache_path(self):
+
+        if self.load_cached_data is None:
+            return None
+
+        if self.default_root_dir is not None:
+            return os.path.join(self.default_root_dir, self.load_cached_data)
+
+        return self.load_cached_data
 
     # This function is called by lightning trainer class with
     # the corresponding stage option
     def setup(self, stage: Optional[str] = None):
+
+        if self.cache_path is not None:
+            with open(self.cache_path, 'rb') as f:
+                self.data = dill.load(f)
 
         # Assign train/val datasets for use in dataloaders
         if stage == 'fit' or stage == None:
@@ -223,10 +241,11 @@ class LitModel(pl.LightningModule):
             'plugins'          : plugins,
         }
         self.data_options    = {
-            'val_size'    : val_size,
-            'batch_size'  : batch_size,
-            'num_workers' : num_workers,
-            'seed'        : seed,
+            'val_size'         : val_size,
+            'batch_size'       : batch_size,
+            'num_workers'      : num_workers,
+            'default_root_dir' : default_root_dir,
+            'seed'             : seed,
         }
         self.reset_trainer()
 
