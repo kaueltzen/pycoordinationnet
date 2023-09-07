@@ -17,8 +17,7 @@
 import dill
 import torch
 
-from typing                  import Union, Optional
-from copy                    import deepcopy
+from typing                  import Union
 from sklearn.model_selection import KFold
 
 from .model_config           import CoordinationNetConfig, DefaultCoordinationNetConfig
@@ -235,7 +234,7 @@ class GraphCoordinationNet:
         y_hat = torch.tensor([], dtype = torch.float)
         y     = torch.tensor([], dtype = torch.float)
 
-        initial_model = self.lit_model.model
+        initial_model = self.lit_model
 
         for fold, (index_train, index_test) in enumerate(KFold(n_splits, shuffle = shuffle, random_state = seed).split(data)):
 
@@ -246,7 +245,7 @@ class GraphCoordinationNet:
             data_test  = torch.utils.data.Subset(data, index_test )
 
             # Clone model
-            self.lit_model.model = deepcopy(initial_model)
+            self.lit_model = initial_model._clone()
 
             # Train model
             best_val_score = self.train(data_train)['best_val_error']
@@ -261,9 +260,6 @@ class GraphCoordinationNet:
             # Save predictions for model evaluation
             y_hat = torch.cat((y_hat, test_y_hat))
             y     = torch.cat((y    , test_y    ))
-
-            # Reset trainer
-            self.lit_model.reset_trainer()
 
         # Reset model
         self.lit_model = initial_model

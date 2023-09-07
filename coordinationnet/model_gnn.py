@@ -127,6 +127,8 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         x = self.layers(x, x_input.edge_index_dict, x_input.batch_dict)
         # Apply final dense layer
         x = self.dense(x)
+        # Apply inverse transformation
+        x = self.scaler_outputs.inverse_transform(x)
 
         return x
 

@@ -21,6 +21,7 @@ import pytorch_lightning as pl
 import os
 
 from abc    import ABC, abstractmethod
+from copy   import deepcopy
 from typing import Optional
 
 from .model_optimizer        import Lamb
@@ -247,7 +248,7 @@ class LitModel(pl.LightningModule):
             'default_root_dir' : default_root_dir,
             'seed'             : seed,
         }
-        self.reset_trainer()
+        self._reset_trainer()
 
     def configure_optimizers(self):
         # Get learning rates
@@ -363,7 +364,7 @@ class LitModel(pl.LightningModule):
         """Prediction on a single batch"""
         return self.model(batch[0])
 
-    def reset_trainer(self):
+    def _reset_trainer(self):
         self.trainer_matric_tracker      = LitMetricTracker()
         self.trainer_early_stopping      = pl.callbacks.EarlyStopping(monitor = 'train_loss', patience = self.trainer_options['patience_es'])
         self.trainer_checkpoint_callback = pl.callbacks.ModelCheckpoint(save_top_k = 1, monitor = 'val_loss', mode = 'min')
@@ -417,3 +418,9 @@ class LitModel(pl.LightningModule):
         # Train model on train data. The test method returns accumulated
         # statistics sent to the logger
         return torch.cat(self.trainer.predict(self, data))
+
+    def _clone(self):
+        model = deepcopy(self)
+        model._reset_trainer()
+
+        return model

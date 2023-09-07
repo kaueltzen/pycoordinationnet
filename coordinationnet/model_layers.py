@@ -32,12 +32,12 @@ class TorchStandardScaler(torch.nn.Module):
         # parameters during training. However, we must store mean and standard
         # deviations in a Parameter module, so that both get automatically
         # pushed to GPU when required
-        self.mean = torch.nn.Parameter(torch.tensor(dim*[0.0]), requires_grad=False)
-        self.std  = torch.nn.Parameter(torch.tensor(dim*[1.0]), requires_grad=False)
+        self.register_buffer('mean', torch.tensor(dim*[0.0], requires_grad=False))
+        self.register_buffer('std',  torch.tensor(dim*[1.0], requires_grad=False))
 
     def fit(self, x):
-        self.mean = torch.nn.Parameter(x.mean(0, keepdim = False                  )       , requires_grad=False)
-        self.std  = torch.nn.Parameter(x.std (0, keepdim = False, unbiased = False) + 1e-8, requires_grad=False)
+        self.mean[:] = x.mean(0, keepdim = False                  )
+        self.std [:] = x.std (0, keepdim = False, unbiased = False) + 1e-8
 
     def transform(self, x):
         return (x - self.mean) / self.std
