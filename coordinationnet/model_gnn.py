@@ -133,7 +133,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         if self.model_config['angles']:
             x_ligand = torch.cat((
-                x_ligand
+                x_ligand,
                 self.rbf(x_input['ligand'].x['angles']),
                 ), dim=1)
 
