@@ -155,6 +155,10 @@ class LitDataset(pl.LightningDataModule, ABC):
             return None
 
         if self.default_root_dir is not None:
+
+            if not os.path.exists(self.default_root_dir):
+                os.makedirs(self.default_root_dir)
+
             return os.path.join(self.default_root_dir, self.load_cached_data)
 
         return self.load_cached_data
