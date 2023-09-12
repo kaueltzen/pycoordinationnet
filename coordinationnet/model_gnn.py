@@ -21,8 +21,8 @@ from torch_geometric.nn   import Sequential, GraphConv, HeteroConv, global_mean_
 
 from .features_coding import NumOxidations, NumGeometries
 
-from .model_config    import DefaultGraphCoordinationNetConfig
-from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer, PaddedEmbedder
+from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer, PaddedEmbedder
+from .model_gnn_config import DefaultGraphCoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
 

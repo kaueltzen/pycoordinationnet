@@ -18,8 +18,8 @@ import torch
 
 from .features_coding import NumOxidations, NumGeometries
 
-from .model_config    import DefaultTransformerCoordinationNetConfig
-from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
+from .model_layers             import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
+from .model_transformer_config import DefaultTransformerCoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
 

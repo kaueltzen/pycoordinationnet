@@ -28,8 +28,8 @@ from tqdm import tqdm
 from .features_datatypes import CoordinationFeatures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
 
-from .model_config       import TransformerCoordinationNetConfig
-from .model_data         import CoordinationFeaturesData, Batch
+from .model_data               import CoordinationFeaturesData, Batch
+from .model_transformer_config import TransformerCoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
 
