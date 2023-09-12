@@ -20,7 +20,6 @@ import torch
 from typing                  import Union
 from sklearn.model_selection import KFold
 
-from .model_config           import DefaultCoordinationNetConfig
 from .model_data             import CoordinationFeaturesData
 from .model_transformer      import ModelCoordinationNet
 from .model_transformer_data import BatchedTransformerCoordinationFeaturesData, TransformerCoordinationFeaturesLoader

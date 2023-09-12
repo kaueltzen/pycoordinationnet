@@ -28,7 +28,6 @@ from torch_geometric.loader import DataLoader as GraphDataLoader
 from .features_coding    import NumOxidations, NumGeometries
 from .features_datatypes import CoordinationFeatures
 
-from .model_config    import DefaultCoordinationNetConfig
 from .model_data      import GenericDataset, Batch
 
 ## ----------------------------------------------------------------------------

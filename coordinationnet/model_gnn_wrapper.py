@@ -19,7 +19,6 @@ import torch
 
 from sklearn.model_selection import KFold
 
-from .model_config           import DefaultCoordinationNetConfig
 from .model_data             import CoordinationFeaturesData
 from .model_gnn              import ModelGraphCoordinationNet
 from .model_gnn_data         import GraphCoordinationFeaturesLoader, GraphCoordinationData

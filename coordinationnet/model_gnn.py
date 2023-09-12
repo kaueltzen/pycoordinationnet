@@ -21,7 +21,7 @@ from torch_geometric.nn   import Sequential, GraphConv, HeteroConv, global_mean_
 
 from .features_coding import NumOxidations, NumGeometries
 
-from .model_config    import DefaultCoordinationNetConfig
+from .model_config    import DefaultGraphCoordinationNetConfig
 from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer, PaddedEmbedder
 
 ## ----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, R
 class ModelGraphCoordinationNet(torch.nn.Module):
     def __init__(self,
         # Specify model components
-        model_config = DefaultCoordinationNetConfig,
+        model_config = DefaultGraphCoordinationNetConfig,
         # Transformer options
         edim = 200,
         # **kwargs contains options for dense layers
@@ -47,7 +47,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         dim_site   = dim_element + dim_oxidation
         dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm + dim_distance
-        dim_ligand = dim_element + dim_oxidation + dim_angle
+        dim_ligand = dim_element + dim_oxidation #+ dim_angle
 
         # The model config determines which components of the model
         # are active
@@ -67,28 +67,37 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         # Core graph network
         self.layers = Sequential('x, edge_index, batch', [
-                # Graph convolutions
+                # Layer 1 -----------------------------------------------------------------------------------
                 (HeteroConv({
                     ('site', '*', 'site'): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
-                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=False),
-                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=False),
+                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True),
+                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True),
                 }), 'x, edge_index -> x'),
                 # Apply activation
                 (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
-                # Graph convolutions
+                # Layer 2 -----------------------------------------------------------------------------------
                 (HeteroConv({
                     ('site', '*', 'site'): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
-                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=False),
-                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=False),
+                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True),
+                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True),
                 }), 'x, edge_index -> x'),
                 # Apply activation
                 (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
-                # Graph convolutions
+                # Layer 3 -----------------------------------------------------------------------------------
                 (HeteroConv({
-                    ('ce', '*', 'site'  ): GraphConv((dim_ce, dim_site  ), dim_site  , add_self_loops=False, bias=False),
+                    ('site', '*', 'site'): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
+                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True),
+                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True),
+                }), 'x, edge_index -> x'),
+                # Apply activation
+                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                # Layer 4 -----------------------------------------------------------------------------------
+                (HeteroConv({
+                    ('ce', '*', 'site'  ): GraphConv((dim_ce, dim_site  ), dim_site  , add_self_loops=True, bias=False),
                 }, aggr='mean'), 'x, edge_index -> x'),
                 # Apply activation
                 (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                # Output  -----------------------------------------------------------------------------------
                 # Apply mean pooling
                 (lambda x, batch: { k : global_mean_pool(v, batch[k]) for k, v in x.items() }, 'x, batch -> x'),
                 # Extract only site features
@@ -116,7 +125,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         x_ligand = torch.cat((
             self.embedding_element  (x_input['ligand'].x['elements'  ]),
             self.embedding_oxidation(x_input['ligand'].x['oxidations']),
-            self.rbf                (x_input['ligand'].x['angles'    ]),
+            #self.rbf                (x_input['ligand'].x['angles'    ]),
             ), dim=1)
 
         # Concatenate embeddings to yield a single feature vector per node

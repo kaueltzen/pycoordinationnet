@@ -18,7 +18,7 @@ import torch
 
 from .features_coding import NumOxidations, NumGeometries
 
-from .model_config    import DefaultCoordinationNetConfig
+from .model_config    import DefaultTransformerCoordinationNetConfig
 from .model_layers    import TorchStandardScaler, ModelDense, ElementEmbedder, RBFLayer, AngleLayer
 
 ## ----------------------------------------------------------------------------
@@ -430,7 +430,7 @@ class ModelCeNeighborsTransformer(torch.nn.Module):
 class ModelCoordinationNet(torch.nn.Module):
     def __init__(self,
         # Specify model components
-        model_config = DefaultCoordinationNetConfig,
+        model_config = DefaultTransformerCoordinationNetConfig,
         # Transformer options
         edim = 200, nencoders = 4, nheads = 4, dim_feedforward = 200, dropout_transformer = 0.0,
         # **kwargs contains options for dense layers

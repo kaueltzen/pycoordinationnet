@@ -28,7 +28,7 @@ from tqdm import tqdm
 from .features_datatypes import CoordinationFeatures
 from .features_coding    import NumElements, NumGeometries, NumOxidations
 
-from .model_config       import CoordinationNetConfig
+from .model_config       import TransformerCoordinationNetConfig
 from .model_data         import CoordinationFeaturesData, Batch
 
 ## ----------------------------------------------------------------------------
@@ -668,7 +668,7 @@ class BatchCeNeighbors(Batch):
 ## ----------------------------------------------------------------------------
 
 class BatchCoordinationFeatures(Batch):
-    def __init__(self, cofe_list : list[CoordinationFeatures], model_config : CoordinationNetConfig) -> None:
+    def __init__(self, cofe_list : list[CoordinationFeatures], model_config : TransformerCoordinationNetConfig) -> None:
         super().__init__()
 
         self.composition           = None
