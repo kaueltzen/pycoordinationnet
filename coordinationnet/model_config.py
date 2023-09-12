@@ -42,3 +42,11 @@ class ModelConfig(dict):
         for key, value in self.items():
             result += f'-> {key:21}: {value}\n'
         return result
+
+    def __copy__(self):
+        return ModelConfig(self)
+
+    def __deepcopy__(self, memo):
+        result = ModelConfig(self)
+        memo[id(self)] = result
+        return result
