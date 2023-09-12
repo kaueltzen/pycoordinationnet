@@ -220,9 +220,6 @@ class LitModel(pl.LightningModule):
                  scheduler = None, optimizer = 'AdamW', optimizer_verbose = False, seed = 42, **kwargs):
         super().__init__()
 
-        if type(strategy) is not str:
-            raise ValueError('Type of argument `strategy\' must be a string')
-
         strategy = 'auto'
 
         if len(devices) > 1:
