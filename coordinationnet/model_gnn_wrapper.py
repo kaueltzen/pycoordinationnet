@@ -53,6 +53,12 @@ class GraphCoordinationNet:
 
         self.lit_model = LitModel(ModelGraphCoordinationNet, **kwargs)
 
+        if self.lit_model.global_rank == 0:
+
+            print(f'{self.lit_model.model.model_config}')
+
+            print(f'Creating a model with {self.lit_model.model.n_parameters:,} parameters')
+
     def fit_scaler(self, data : LitGraphCoordinationFeaturesData):
 
         y = torch.cat([ y_batch for _, y_batch in data.data_raw ])

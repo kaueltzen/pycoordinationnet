@@ -48,7 +48,7 @@ class TransformerCoordinationNet:
 
             print(f'{self.lit_model.model.model_config}')
 
-            print(f'Creating a GNN model with {self.lit_model.model.n_parameters:,} parameters')
+            print(f'Creating a model with {self.lit_model.model.n_parameters:,} parameters')
 
     def fit_scaler(self, data : LitTransformerCoordinationFeaturesData):
         y = torch.cat([ y_batch for _, y_batch in data.get_dataloader(data.data) ])
