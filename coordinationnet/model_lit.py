@@ -207,7 +207,7 @@ class LitModel(pl.LightningModule):
                  # pytorch model class and loss function
                  model, loss = torch.nn.L1Loss(),
                  # Trainer options
-                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], strategy = 'auto', plugins = None, default_root_dir = 'checkpoints',
+                 patience_sd = 10, patience_es = 50, max_epochs = 1000, accelerator = 'gpu', devices = [0], plugins = None, default_root_dir = 'checkpoints',
                  # Data options
                  val_size = 0.1, batch_size = 128, num_workers = 2,
                  # Learning rate
@@ -222,6 +222,11 @@ class LitModel(pl.LightningModule):
 
         if type(strategy) is not str:
             raise ValueError('Type of argument `strategy\' must be a string')
+
+        strategy = 'auto'
+
+        if len(devices) > 1:
+            strategy = 'ddp_find_unused_parameters_true'
 
         # Save all hyperparameters to `hparams` (e.g. lr)
         self.save_hyperparameters()
