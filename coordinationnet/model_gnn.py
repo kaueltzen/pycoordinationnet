@@ -46,8 +46,14 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         dim_angle     = 40
 
         dim_site   = dim_element + dim_oxidation
-        dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm + dim_distance
-        dim_ligand = dim_element + dim_oxidation #+ dim_angle
+        dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm
+        dim_ligand = dim_element + dim_oxidation
+
+        if model_config['distances']:
+            dim_ce += dim_distance
+
+        if model_config['angles']:
+            dim_ligand += dim_angle
 
         # The model config determines which components of the model
         # are active
@@ -83,14 +89,6 @@ class ModelGraphCoordinationNet(torch.nn.Module):
                 }), 'x, edge_index -> x'),
                 # Apply activation
                 (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
-                # Layer 3 -----------------------------------------------------------------------------------
-                (HeteroConv({
-                    ('site', '*', 'site'): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
-                    ('ligand', '*', 'ce'): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True),
-                    ('ce', '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True),
-                }), 'x, edge_index -> x'),
-                # Apply activation
-                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
                 # Layer 4 -----------------------------------------------------------------------------------
                 (HeteroConv({
                     ('ce', '*', 'site'  ): GraphConv((dim_ce, dim_site  ), dim_site  , add_self_loops=True, bias=False),
@@ -118,15 +116,26 @@ class ModelGraphCoordinationNet(torch.nn.Module):
             self.embedding_element  (x_input['ce'].x['elements'  ]),
             self.embedding_oxidation(x_input['ce'].x['oxidations']),
             self.embedding_geometry (x_input['ce'].x['geometries']),
-            self.rbf                (x_input['ce'].x['distances' ]),
             self.rbf                (x_input['ce'].x['csms'      ]),
             ), dim=1)
 
         x_ligand = torch.cat((
             self.embedding_element  (x_input['ligand'].x['elements'  ]),
             self.embedding_oxidation(x_input['ligand'].x['oxidations']),
-            #self.rbf                (x_input['ligand'].x['angles'    ]),
             ), dim=1)
+
+        # Add optional features
+        if self.model_config['distances']:
+            x_ce = torch.cat((
+                x_ce,
+                self.rbf(x_input['ce'].x['distances' ]),
+                ), dim=1)
+
+        if self.model_config['angles']:
+            x_ligand = torch.cat((
+                x_ligand
+                self.rbf(x_input['ligand'].x['angles']),
+                ), dim=1)
 
         # Concatenate embeddings to yield a single feature vector per node
         x = {
