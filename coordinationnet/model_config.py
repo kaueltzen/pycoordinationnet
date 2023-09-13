@@ -14,24 +14,25 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ## ----------------------------------------------------------------------------
 
-class ModelConfig(dict):
+import collections
+
+## ----------------------------------------------------------------------------
+
+class ModelConfig(collections.UserDict):
     def __init__(self, _model_config):
         super().__init__(self)
         for key, value in _model_config.items():
             super().__setitem__(key, value)
 
-    def __call__(self, *args, **kwargs):
-        # Check that we do not accept any invalid
-        # config options
+    def __call__(self, **kwargs):
         for key, value in kwargs.items():
-            if key not in self:
-                raise KeyError(key)
-            else:
-                super().__setitem__(key, value)
+            self[key] = value
 
         return self
 
     def __setitem__(self, key, value):
+        # Check that we do not accept any invalid
+        # config options
         if key in self:
             super().__setitem__(key, value)
         else:
