@@ -42,8 +42,8 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         dim_oxidation = 10
         dim_geometry  = 10
         dim_csm       = 40
-        dim_distance  = 40
-        dim_angle     = 40
+        dim_distance  = 80
+        dim_angle     = 80
 
         dim_site   = dim_element + dim_oxidation
         dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm
@@ -62,7 +62,9 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.scaler_outputs      = TorchStandardScaler(layers[-1])
 
         # RBF encoder
-        self.rbf                 = RBFLayer(0.0, 1.0, bins=40)
+        self.rbf_csm             = RBFLayer(0.0, 1.0, bins=dim_csm)
+        self.rbf_distances       = RBFLayer(0.0, 1.0, bins=dim_distance)
+        self.rbf_angles          = RBFLayer(0.0, 1.0, bins=dim_angle)
 
         # Embeddings
         self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=True)
@@ -116,7 +118,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
             self.embedding_element  (x_input['ce'].x['elements'  ]),
             self.embedding_oxidation(x_input['ce'].x['oxidations']),
             self.embedding_geometry (x_input['ce'].x['geometries']),
-            self.rbf                (x_input['ce'].x['csms'      ]),
+            self.rbf_csm            (x_input['ce'].x['csms'      ]),
             ), dim=1)
 
         x_ligand = torch.cat((
@@ -128,13 +130,13 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         if self.model_config['distances']:
             x_ce = torch.cat((
                 x_ce,
-                self.rbf(x_input['ce'].x['distances' ]),
+                self.rbf_distances(x_input['ce'].x['distances']),
                 ), dim=1)
 
         if self.model_config['angles']:
             x_ligand = torch.cat((
                 x_ligand,
-                self.rbf(x_input['ligand'].x['angles']),
+                self.rbf_angles(x_input['ligand'].x['angles']),
                 ), dim=1)
 
         # Concatenate embeddings to yield a single feature vector per node
