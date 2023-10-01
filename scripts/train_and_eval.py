@@ -24,6 +24,7 @@ model_config = GraphCoordinationNetConfig(
     distances     = True,
     angles        = True,
 )
+
 ## ----------------------------------------------------------------------------
 
 get_model = lambda devices: GraphCoordinationNet(
