@@ -30,8 +30,8 @@ class ModelGraphCoordinationNet(torch.nn.Module):
     def __init__(self,
         # Specify model components
         model_config = DefaultGraphCoordinationNetConfig,
-        # **kwargs contains options for dense layers
-        **kwargs):
+        # Options for dense layers
+        layers, **kwargs):
 
         super().__init__()
 
@@ -103,7 +103,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
             ])
 
         # Final dense layer
-        self.dense = ModelDense([dim_site] + model_config['layers'], **kwargs)
+        self.dense = ModelDense([dim_site] + layers, **kwargs)
 
     def forward(self, x_input):
 
