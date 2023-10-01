@@ -16,13 +16,28 @@
 
 import torch
 
-from torch_geometric.data import Data
-from torch_geometric.nn   import Sequential, GraphConv, HeteroConv, global_mean_pool
+from typing import Union
+
+from torch_geometric.data    import Data
+from torch_geometric.nn      import Sequential, GraphConv, CGConv, HeteroConv, global_mean_pool
+from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.typing  import Adj, OptTensor, PairTensor
 
 from .features_coding import NumOxidations, NumGeometries
 
 from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFEmbedding, ZeroPadder, PaddedEmbedder
 from .model_gnn_config import DefaultGraphCoordinationNetConfig
+
+## ----------------------------------------------------------------------------
+
+class IdConv(MessagePassing):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def forward(self, x: Union[torch.Tensor, PairTensor], edge_index: Adj, edge_attr: OptTensor = None) -> torch.Tensor:
+
+        return x
 
 ## ----------------------------------------------------------------------------
 
@@ -48,7 +63,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         dim_ligand = dim_element + dim_oxidation
 
         if model_config['distances']:
-            dim_ce += dim_distance
+            dim_ligand += dim_distance
 
         if model_config['angles']:
             dim_ligand += dim_angle
@@ -60,38 +75,39 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.scaler_outputs      = TorchStandardScaler(layers[-1])
 
         # RBF encoder
-        self.rbf_csm             = RBFEmbedding(0.0, 1.0, bins=model_config['bins_csm'], edim=dim_csm)
-        self.rbf_distances       = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
-        self.rbf_angles          = RBFEmbedding(0.0, 1.0, bins=model_config['bins_angle'], edim=dim_angle)
+        self.rbf_csm             = RBFEmbedding(0.0, 1.0, bins=model_config['bins_csm']     , edim=dim_csm)
+        self.rbf_distances_1     = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
+        self.rbf_distances_2     = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
+        self.rbf_angles          = RBFEmbedding(0.0, 1.0, bins=model_config['bins_angle']   , edim=dim_angle)
 
         # Embeddings
-        self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=True)
-        self.embedding_oxidation = torch.nn.Embedding(NumOxidations, 10)
-        self.embedding_geometry  = PaddedEmbedder(NumGeometries, 10)
+        self.embedding_element   = ElementEmbedder(dim_element, from_pretrained=True, freeze=True)
+        self.embedding_oxidation = torch.nn.Embedding(NumOxidations, dim_oxidation)
+        self.embedding_geometry  = PaddedEmbedder(NumGeometries, dim_geometry)
 
         self.activation          = torch.nn.ELU(inplace=True)
 
         # Core graph network
-        self.layers = Sequential('x, edge_index, batch', [
+        self.layers = Sequential('x, edge_index, edge_attr, batch', [
                 # Layer 1 -----------------------------------------------------------------------------------
                 (HeteroConv({
-                    ('site'  , '*', 'site'  ): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
-                    ('ligand', '*', 'ce'    ): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True ),
-                    ('ce'    , '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True ),
-                }), 'x, edge_index -> x'),
-                # Apply activation
-                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                    ('site'  , '*', 'site'  ): IdConv(),
+                    ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
+                    ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
+                }), 'x, edge_index, edge_attr -> x'),
+                # Apply activation, except for site nodes
+                (lambda x: { k : v if k == 'site' else self.activation(v) for k, v in x.items()}, 'x -> x'),
                 # Layer 2 -----------------------------------------------------------------------------------
                 (HeteroConv({
-                    ('site'  , '*', 'site'  ): GraphConv((dim_site, dim_site), dim_site  , add_self_loops=False),
-                    ('ligand', '*', 'ce'    ): GraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True ),
-                    ('ce'    , '*', 'ligand'): GraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True ),
-                }), 'x, edge_index -> x'),
-                # Apply activation
-                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+                    ('site'  , '*', 'site'  ): IdConv(),
+                    ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
+                    ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
+                }), 'x, edge_index, edge_attr -> x'),
+                # Apply activation, except for site nodes
+                (lambda x: { k : v if k == 'site' else self.activation(v) for k, v in x.items()}, 'x -> x'),
                 # Layer 4 -----------------------------------------------------------------------------------
                 (HeteroConv({
-                    ('ce', '*', 'site'  ): GraphConv((dim_ce, dim_site  ), dim_site  , add_self_loops=True, bias=False),
+                    ('ce', '*', 'site'): GraphConv((dim_ce, dim_site), dim_site, add_self_loops=True, bias=False),
                 }, aggr='mean'), 'x, edge_index -> x'),
                 # Apply activation
                 (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
@@ -126,9 +142,9 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         # Add optional features
         if self.model_config['distances']:
-            x_ce = torch.cat((
-                x_ce,
-                self.rbf_distances(x_input['ce'].x['distances']),
+            x_ligand = torch.cat((
+                x_ligand,
+                self.rbf_distances_1(x_input['ligand'].x['distances']),
                 ), dim=1)
 
         if self.model_config['angles']:
@@ -141,8 +157,12 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         x = {
             'site': x_site, 'ce': x_ce, 'ligand': x_ligand,
         }
+        edge_attr_dict = {
+            ('ligand', '*', 'ce'): self.rbf_distances_2(x_input['ligand', '*', 'ce'].edge_attr),
+            ('ce', '*', 'ligand'): self.rbf_distances_2(x_input['ce', '*', 'ligand'].edge_attr),
+        }
         # Propagate features through graph network
-        x = self.layers(x, x_input.edge_index_dict, x_input.batch_dict)
+        x = self.layers(x, x_input.edge_index_dict, edge_attr_dict, x_input.batch_dict)
         # Apply final dense layer
         x = self.dense(x)
         # Apply inverse transformation

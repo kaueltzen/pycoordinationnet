@@ -39,7 +39,7 @@ def code_csms(csms) -> list[float]:
 def code_distance(distance : float, l : int) -> torch.Tensor:
     # Sites `from` and `to` get distance assigned, all ligands
     # get inf
-    x = torch.tensor(2*[distance], dtype=torch.float) / 8.0
+    x = torch.tensor(l*[distance], dtype=torch.float) / 8.0
     return x
 
 def code_angles(angles : list[float]) -> torch.Tensor:
@@ -47,6 +47,14 @@ def code_angles(angles : list[float]) -> torch.Tensor:
     # get inf
     x = torch.tensor(angles, dtype=torch.float) / 180
     return x
+
+def get_distance(features, site, site_to):
+    for item in features.distances:
+        if item['site'] == site and item['site_to'] == site_to:
+            return item['distance']
+        if item['site_to'] == site and item['site'] == site_to:
+            return item['distance']
+    raise RuntimeError('Distance not available')
 
 ## ----------------------------------------------------------------------------
 
@@ -101,17 +109,19 @@ class GraphCoordinationData(GenericDataset):
             'oxidations': torch.tensor([], dtype=torch.long),
             'geometries': torch.tensor([], dtype=torch.long),
             'csms'      : torch.tensor([], dtype=torch.float),
-            'distances' : torch.tensor([], dtype=torch.float),
         }
         x_ligand = {
             'elements'  : torch.tensor([], dtype=torch.long),
             'oxidations': torch.tensor([], dtype=torch.long),
+            'distances' : torch.tensor([], dtype=torch.float),
             'angles'    : torch.tensor([], dtype=torch.float),
         }
         # Edges
-        e1 = [[], []]
-        e2 = [[], []]
-        e3 = [[], []]
+        edge_index_1 = [[], []]
+        edge_index_2 = [[], []]
+        edge_index_3 = [[], []]
+        # Edge features
+        edge_attr = []
         # Global node index i
         i1 = 0
         i2 = 0
@@ -126,24 +136,27 @@ class GraphCoordinationData(GenericDataset):
                 x_ce['elements'  ] = torch.cat((x_ce['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx_ce ], dtype=torch.long)))
                 x_ce['oxidations'] = torch.cat((x_ce['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx_ce ], dtype=torch.long)))
                 x_ce['geometries'] = torch.cat((x_ce['geometries'], torch.tensor([ site_ces[site] for site in idx_ce ], dtype=torch.long )))
-                x_ce['distances' ] = torch.cat((x_ce['distances' ], code_distance(nb['distance'], l)))
                 x_ce['csms'      ] = torch.cat((x_ce['csms'      ], code_csms([ site_csm[site] for site in idx_ce ])))
                 # Construct ligand features
                 x_ligand['elements'  ] = torch.cat((x_ligand['elements'  ], torch.tensor([ features.sites.elements  [site] for site in idx_ligand ], dtype=torch.long)))
                 x_ligand['oxidations'] = torch.cat((x_ligand['oxidations'], torch.tensor([ features.sites.oxidations[site] for site in idx_ligand ], dtype=torch.long)))
-                x_ligand['angles'    ] = torch.cat((x_ligand['angles'    ], code_angles(nb['angles'])))
+                x_ligand['distances' ] = torch.cat((x_ligand['distances' ], code_distance(nb['distance'], l)))
+                x_ligand['angles'    ] = torch.cat((x_ligand['angles'    ], code_angles  (nb['angles'])))
 
-                for j, _ in enumerate(nb['ligand_indices']):
+                for j, k in enumerate(nb['ligand_indices']):
                     # From ligand     ; To CE
-                    e1[0].append(i2+j); e1[1].append(i1+0)
-                    e1[0].append(i2+j); e1[1].append(i1+1)
+                    edge_index_1[0].append(i2+j); edge_index_1[1].append(i1+0)
+                    edge_index_1[0].append(i2+j); edge_index_1[1].append(i1+1)
                     # From CE         ; To ligand
-                    e2[0].append(i1+0); e2[1].append(i2+j)
-                    e2[0].append(i1+1); e2[1].append(i2+j)
+                    edge_index_2[0].append(i1+0); edge_index_2[1].append(i2+j)
+                    edge_index_2[0].append(i1+1); edge_index_2[1].append(i2+j)
+                    # ligand-CE features
+                    edge_attr.append(get_distance(features, idx_ce[0], k))
+                    edge_attr.append(get_distance(features, idx_ce[1], k))
 
                 # Connect CE nodes to site nodes
-                e3[0].append(i1+0); e3[1].append(nb['site'])
-                e3[0].append(i1+1); e3[1].append(nb['site_to'])
+                edge_index_3[0].append(i1+0); edge_index_3[1].append(nb['site'])
+                edge_index_3[0].append(i1+1); edge_index_3[1].append(nb['site_to'])
 
                 i1 += 2
                 i2 += len(nb['ligand_indices'])
@@ -155,10 +168,13 @@ class GraphCoordinationData(GenericDataset):
         data['ce'    ].x = x_ce
         data['ligand'].x = x_ligand
         # Assign edges
-        data['ligand', '*', 'ce'].edge_index = torch.tensor(e1, dtype=torch.long)
-        data['ce', '*', 'ligand'].edge_index = torch.tensor(e2, dtype=torch.long)
+        data['ligand', '*', 'ce'].edge_index = torch.tensor(edge_index_1, dtype=torch.long)
+        data['ce', '*', 'ligand'].edge_index = torch.tensor(edge_index_2, dtype=torch.long)
+        # Assign edge features
+        data['ligand', '*', 'ce'].edge_attr = torch.tensor(edge_attr, dtype=torch.long)
+        data['ce', '*', 'ligand'].edge_attr = torch.tensor(edge_attr, dtype=torch.long)
         # Connect CE nodes to site nodes
-        data['ce', '*', 'site'].edge_index = torch.tensor(e3, dtype=torch.long)
+        data['ce', '*', 'site'].edge_index = torch.tensor(edge_index_3, dtype=torch.long)
 
     @classmethod
     def __compute_graph__(cls, features : CoordinationFeatures) -> GraphData:
