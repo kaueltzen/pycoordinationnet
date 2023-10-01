@@ -31,7 +31,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         # Specify model components
         model_config = DefaultGraphCoordinationNetConfig,
         # Options for dense layers
-        layers, **kwargs):
+        layers = [512, 128, 64, 1], **kwargs):
 
         super().__init__()
 
