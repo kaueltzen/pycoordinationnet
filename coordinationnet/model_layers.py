@@ -194,3 +194,40 @@ class ElementEmbedder(torch.nn.Module):
         x = self.embedding(x)
         x = self.linear(x)
         return x
+
+## ----------------------------------------------------------------------------
+
+class ZeroPadder(torch.nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, x):
+
+        assert self.dim >= x.shape[1]
+
+        if self.dim > x.shape[1]:
+            z = torch.zeros((x.shape[0], self.dim - x.shape[1]), device=x.device)
+            x = torch.cat((x, z), dim=1)
+
+        return x
+
+## ----------------------------------------------------------------------------
+
+class RBFEmbedding(torch.nn.Module):
+    def __init__(self, vmin : float, vmax : float, bins : int = 40, edim = 128, gamma : float = None):
+        super().__init__()
+        self.vmin = vmin
+        self.vmax = vmax
+        self.bins = bins
+        self.register_buffer(
+            "centers", torch.linspace(self.vmin, self.vmax, self.bins)
+        )
+        self.gamma = bins/math.fabs(vmax-vmin) if gamma is None else gamma
+        self.embedding = torch.nn.Embedding(bins, edim)
+    #
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.gamma*(x.unsqueeze(1) - self.centers) ** 2
+        x = torch.exp(-x)
+        x = x@self.embedding.weight
+        return x
