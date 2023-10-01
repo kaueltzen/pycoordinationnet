@@ -30,20 +30,18 @@ class ModelGraphCoordinationNet(torch.nn.Module):
     def __init__(self,
         # Specify model components
         model_config = DefaultGraphCoordinationNetConfig,
-        # Transformer options
-        edim = 200,
         # **kwargs contains options for dense layers
-        layers = [512, 128, 1], **kwargs):
+        **kwargs):
 
         super().__init__()
 
         # Feature dimensions
-        dim_element   = edim
-        dim_oxidation = 10
-        dim_geometry  = 10
-        dim_csm       = 128
-        dim_distance  = 128
-        dim_angle     = 128
+        dim_element   = model_config['dim_element']
+        dim_oxidation = model_config['dim_oxidation']
+        dim_geometry  = model_config['dim_geometry']
+        dim_csm       = model_config['dim_csm']
+        dim_distance  = model_config['dim_distance']
+        dim_angle     = model_config['dim_angle']
 
         dim_site   = dim_element + dim_oxidation
         dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm
@@ -62,9 +60,9 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.scaler_outputs      = TorchStandardScaler(layers[-1])
 
         # RBF encoder
-        self.rbf_csm             = RBFEmbedding(0.0, 1.0, bins=20, edim=dim_csm)
-        self.rbf_distances       = RBFEmbedding(0.0, 1.0, bins=20, edim=dim_distance)
-        self.rbf_angles          = RBFEmbedding(0.0, 1.0, bins=20, edim=dim_angle)
+        self.rbf_csm             = RBFEmbedding(0.0, 1.0, bins=model_config['bins_csm'], edim=dim_csm)
+        self.rbf_distances       = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
+        self.rbf_angles          = RBFEmbedding(0.0, 1.0, bins=model_config['bins_angle'], edim=dim_angle)
 
         # Embeddings
         self.embedding_element   = ElementEmbedder(edim, from_pretrained=True, freeze=True)
@@ -105,7 +103,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
             ])
 
         # Final dense layer
-        self.dense = ModelDense([dim_site] + layers, **kwargs)
+        self.dense = ModelDense([dim_site] + model_config['layers'], **kwargs)
 
     def forward(self, x_input):
 

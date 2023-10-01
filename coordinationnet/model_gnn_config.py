@@ -19,8 +19,18 @@ from .model_config import ModelConfig
 ## ----------------------------------------------------------------------------
 
 _graph_config = {
-    'distances' : False,
-    'angles'    : False,
+    'layers'        : None,
+    'dim_element'   : None,
+    'dim_oxidation' : None,
+    'dim_geometry'  : None,
+    'dim_csm'       : None,
+    'dim_distance'  : None,
+    'dim_angle'     : None,
+    'bins_csm'      : None,
+    'bins_distance' : None,
+    'bins_angle'    : None,
+    'distances'     : False,
+    'angles'        : False,
 }
 
 ## ----------------------------------------------------------------------------
@@ -28,5 +38,15 @@ _graph_config = {
 GraphCoordinationNetConfig = ModelConfig(_graph_config)
 
 DefaultGraphCoordinationNetConfig = ModelConfig(_graph_config)(
-    distances = True,
-    angles    = True)
+    layers        = [512, 128, 1],
+    dim_element   = 200,
+    dim_oxidation = 10,
+    dim_geometry  = 10,
+    dim_csm       = 128,
+    dim_distance  = 128,
+    dim_angle     = 128,
+    bins_csm      = 20,
+    bins_distance = 20,
+    bins_angle    = 20,
+    distances     = True,
+    angles        = True)
