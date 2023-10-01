@@ -11,6 +11,6 @@ setup(name='CoordinationNet',
       ],
       include_package_data=True,
       packages=['coordinationnet'],
-      install_requires=['numpy', 'pymatgen', 'torch', 'pytorch-lightning', 'dill'],
+      install_requires=['numpy', 'pymatgen', 'torch', 'pytorch-lightning', 'dill', 'torch_geometric'],
       python_requires='>=3.9',
       )
