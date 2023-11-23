@@ -21,6 +21,7 @@ from .model_config import ModelConfig
 _graph_config = {
     'num_convs'     : None,
     'conv_type'     : None,
+    'rbf_type'      : None,
     'dim_element'   : None,
     'dim_oxidation' : None,
     'dim_geometry'  : None,
@@ -41,6 +42,7 @@ GraphCoordinationNetConfig = ModelConfig(_graph_config)
 DefaultGraphCoordinationNetConfig = ModelConfig(_graph_config)(
     num_convs     = 2,
     conv_type     = 'CGConv',
+    rbf_type      = 'Bessel',
     dim_element   = 200,
     dim_oxidation = 10,
     dim_geometry  = 10,

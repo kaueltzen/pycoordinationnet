@@ -25,7 +25,7 @@ from torch_geometric.typing  import Adj, OptTensor, PairTensor
 
 from .features_coding import NumOxidations, NumGeometries
 
-from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFEmbedding, PaddedEmbedder
+from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFEmbedding, PaddedEmbedder, SphericalBesselFunction
 from .model_gnn_config import DefaultGraphCoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
@@ -74,6 +74,9 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         if model_config['conv_type'] is None:
             model_config['conv_type'] = 'CGConv'
 
+        if model_config['rbf_type'] is None:
+            model_config['rbf_type'] = 'Bessel'
+
         # The model config determines which components of the model
         # are active
         self.model_config        = model_config
@@ -81,10 +84,18 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         self.scaler_outputs      = TorchStandardScaler(layers[-1])
 
         # RBF encoder
-        self.rbf_csm             = RBFEmbedding(0.0, 1.0, bins=model_config['bins_csm']     , edim=dim_csm)
-        self.rbf_distances_1     = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
-        self.rbf_distances_2     = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
-        self.rbf_angles          = RBFEmbedding(0.0, 1.0, bins=model_config['bins_angle']   , edim=dim_angle)
+        if model_config['rbf_type'] == 'Gaussian' or model_config['rbf_type'] is None:
+            self.rbf_csm         = RBFEmbedding(0.0, 1.0, bins=model_config['bins_csm']     , edim=dim_csm)
+            self.rbf_distances_1 = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
+            self.rbf_distances_2 = RBFEmbedding(0.0, 1.0, bins=model_config['bins_distance'], edim=dim_distance)
+            self.rbf_angles      = RBFEmbedding(0.0, 1.0, bins=model_config['bins_angle']   , edim=dim_angle)
+        elif model_config['rbf_type'] == 'Bessel':
+            self.rbf_csm         = SphericalBesselFunction(max_n=model_config['bins_csm']     , edim=dim_csm)
+            self.rbf_distances_1 = SphericalBesselFunction(max_n=model_config['bins_distance'], edim=dim_distance)
+            self.rbf_distances_2 = SphericalBesselFunction(max_n=model_config['bins_distance'], edim=dim_distance)
+            self.rbf_angles      = SphericalBesselFunction(max_n=model_config['bins_angle']   , edim=dim_angle)
+        else:
+            raise ValueError('Invalid RBF embedder')
 
         # Embeddings
         self.embedding_element   = ElementEmbedder(dim_element, from_pretrained=True, freeze=True)

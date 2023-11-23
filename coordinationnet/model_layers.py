@@ -241,7 +241,7 @@ class RBFEmbedding(torch.nn.Module):
 class SphericalBesselFunction(torch.nn.Module):
     """Calculate the spherical Bessel function based on sympy + pytorch implementations."""
 
-    def __init__(self, max_l: int, max_n: int = 5, cutoff: float = 5.0, smooth: bool = False):
+    def __init__(self, max_l: int = None, max_n: int = 5, edim: int = 100, cutoff: float = 5.0, smooth: bool = False):
         """Args:
         max_l: int, max order (excluding l)
         max_n: int, max number of roots used in each l
@@ -249,6 +249,13 @@ class SphericalBesselFunction(torch.nn.Module):
         smooth: Whether to smooth the function.
         """
         super().__init__()
+
+        if max_l is None:
+            if edim % max_n != 0:
+                raise ValueError('edim must be divisible by max_n')
+
+            max_l = int(edim / max_n)
+
         self.max_l = max_l
         self.max_n = max_n
         self.register_buffer("cutoff", torch.tensor(cutoff))
@@ -259,7 +266,8 @@ class SphericalBesselFunction(torch.nn.Module):
             self.funcs = self._calculate_symbolic_funcs()
 
         currdir = os.path.dirname(os.path.abspath(__file__))
-        self.SPHERICAL_BESSEL_ROOTS = torch.tensor(np.load(os.path.join(currdir, 'model_layers_sbroots.npy')), dtype=torch.float)
+        self.register_buffer("SPHERICAL_BESSEL_ROOTS",
+                             torch.tensor(np.load(os.path.join(currdir, 'model_layers_sbroots.npy')), dtype=torch.float))
 
     @lru_cache(maxsize=128)
     def _calculate_symbolic_funcs(self) -> list:
@@ -284,6 +292,8 @@ class SphericalBesselFunction(torch.nn.Module):
         Returns:
             torch.Tensor: [n, max_n * max_l] spherical Bessel function results
         """
+        assert len(r.shape) == 1
+
         if self.smooth:
             return self._call_smooth_sbf(r)
         return self._call_sbf(r)
@@ -294,13 +304,13 @@ class SphericalBesselFunction(torch.nn.Module):
 
     def _call_sbf(self, r):
         r_c = r.clone()
-        r_c[r_c > self.cutoff] = self.cutoff
+        r_c[r_c > self.cutoff] = self.cutoff.to(r_c.dtype)
         roots = self.SPHERICAL_BESSEL_ROOTS[: self.max_l, : self.max_n]
 
         results = []
-        factor = torch.tensor(sqrt(2.0 / self.cutoff**3))
+        factor = sqrt(2.0 / self.cutoff**3)
         for i in range(self.max_l):
-            root = torch.tensor(roots[i])
+            root = roots[i]
             func = self.funcs[i]
             func_add1 = self.funcs[i + 1]
             results.append(
