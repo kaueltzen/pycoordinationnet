@@ -304,7 +304,8 @@ class SphericalBesselFunction(torch.nn.Module):
 
     def _call_sbf(self, r):
         r_c = r.clone()
-        r_c[r_c > self.cutoff] = self.cutoff.to(r_c.dtype)
+        r_c[r_c >= self.cutoff] = self.cutoff.to(r_c.dtype)
+        r_c[r_c <= 1e-8       ] = 1e-8
         roots = self.SPHERICAL_BESSEL_ROOTS[: self.max_l, : self.max_n]
 
         results = []
