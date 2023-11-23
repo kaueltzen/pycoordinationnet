@@ -19,6 +19,10 @@ import numpy  as np
 import pandas as pd
 import torch
 import os
+import sympy
+
+from functools import lru_cache
+from math      import pi, sqrt
 
 from .features_coding import NumElements
 
@@ -231,3 +235,124 @@ class RBFEmbedding(torch.nn.Module):
         x = torch.exp(-x)
         x = x@self.embedding.weight
         return x
+
+## ----------------------------------------------------------------------------
+
+class SphericalBesselFunction(torch.nn.Module):
+    """Calculate the spherical Bessel function based on sympy + pytorch implementations."""
+
+    def __init__(self, max_l: int, max_n: int = 5, cutoff: float = 5.0, smooth: bool = False):
+        """Args:
+        max_l: int, max order (excluding l)
+        max_n: int, max number of roots used in each l
+        cutoff: float, cutoff radius
+        smooth: Whether to smooth the function.
+        """
+        super().__init__()
+        self.max_l = max_l
+        self.max_n = max_n
+        self.register_buffer("cutoff", torch.tensor(cutoff))
+        self.smooth = smooth
+        if smooth:
+            self.funcs = self._calculate_smooth_symbolic_funcs()
+        else:
+            self.funcs = self._calculate_symbolic_funcs()
+
+        currdir = os.path.dirname(os.path.abspath(__file__))
+        self.SPHERICAL_BESSEL_ROOTS = torch.tensor(np.load(os.path.join(currdir, 'model_layers_sbroots.npy')), dtype=torch.float)
+
+    @lru_cache(maxsize=128)
+    def _calculate_symbolic_funcs(self) -> list:
+        """Spherical basis functions based on Rayleigh formula. This function
+        generates
+        symbolic formula.
+
+        Returns: list of symbolic functions
+        """
+        x = sympy.symbols("x")
+        funcs = [sympy.expand_func(sympy.functions.special.bessel.jn(i, x)) for i in range(self.max_l + 1)]
+        return [sympy.lambdify(x, func, torch) for func in funcs]
+
+    @lru_cache(maxsize=128)
+    def _calculate_smooth_symbolic_funcs(self) -> list:
+        return self._get_lambda_func(max_n=self.max_n, cutoff=self.cutoff)
+
+    def forward(self, r: torch.Tensor) -> torch.Tensor:
+        """Args:
+            r: torch.Tensor, distance tensor, 1D.
+
+        Returns:
+            torch.Tensor: [n, max_n * max_l] spherical Bessel function results
+        """
+        if self.smooth:
+            return self._call_smooth_sbf(r)
+        return self._call_sbf(r)
+
+    def _call_smooth_sbf(self, r):
+        results = [i(r) for i in self.funcs]
+        return torch.t(torch.stack(results))
+
+    def _call_sbf(self, r):
+        r_c = r.clone()
+        r_c[r_c > self.cutoff] = self.cutoff
+        roots = self.SPHERICAL_BESSEL_ROOTS[: self.max_l, : self.max_n]
+
+        results = []
+        factor = torch.tensor(sqrt(2.0 / self.cutoff**3))
+        for i in range(self.max_l):
+            root = torch.tensor(roots[i])
+            func = self.funcs[i]
+            func_add1 = self.funcs[i + 1]
+            results.append(
+                func(r_c[:, None] * root[None, :] / self.cutoff) * factor / torch.abs(func_add1(root[None, :]))
+            )
+        return torch.cat(results, axis=1)
+
+    @staticmethod
+    def rbf_j0(r, cutoff: float = 5.0, max_n: int = 3):
+        """Spherical Bessel function of order 0, ensuring the function value
+        vanishes at cutoff.
+
+        Args:
+            r: torch.Tensor pytorch tensors
+            cutoff: float, the cutoff radius
+            max_n: int max number of basis
+
+        Returns:
+            basis function expansion using first spherical Bessel function
+        """
+        n = (torch.arange(1, max_n + 1)).type(dtype=torch.float)[None, :]
+        r = r[:, None]
+        return sqrt(2.0 / cutoff) * torch.sin(n * pi / cutoff * r) / r
+
+    @lru_cache(maxsize=128)
+    @staticmethod
+    def _get_lambda_func(max_n, cutoff: float = 5.0):
+        r = sympy.symbols("r")
+        en = [i**2 * (i + 2) ** 2 / (4 * (i + 1) ** 4 + 1) for i in range(max_n)]
+
+        dn = [1.0]
+        for i in range(1, max_n):
+            dn_value = 1 - en[i] / dn[-1]
+            dn.append(dn_value)
+
+        fnr = [
+            (-1) ** i
+            * sqrt(2.0)
+            * pi
+            / cutoff**1.5
+            * (i + 1)
+            * (i + 2)
+            / sympy.sqrt(1.0 * (i + 1) ** 2 + (i + 2) ** 2)
+            * (
+                sympy.sin(r * (i + 1) * pi / cutoff) / (r * (i + 1) * pi / cutoff)
+                + sympy.sin(r * (i + 2) * pi / cutoff) / (r * (i + 2) * pi / cutoff)
+            )
+            for i in range(max_n)
+        ]
+
+        gnr = [fnr[0]]
+        for i in range(1, max_n):
+            gnr_value = 1 / sympy.sqrt(dn[i]) * (fnr[i] + sympy.sqrt(en[i] / dn[i - 1]) * gnr[-1])
+            gnr.append(gnr_value)
+        return [sympy.lambdify([r], sympy.simplify(i), torch) for i in gnr]

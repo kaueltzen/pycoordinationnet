@@ -19,13 +19,13 @@ import torch
 from typing import Union
 
 from torch_geometric.data    import Data
-from torch_geometric.nn      import Sequential, GraphConv, CGConv, HeteroConv, global_mean_pool
+from torch_geometric.nn      import Sequential, GraphConv, CGConv, HeteroConv, ResGatedGraphConv, global_mean_pool
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing  import Adj, OptTensor, PairTensor
 
 from .features_coding import NumOxidations, NumGeometries
 
-from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFEmbedding, ZeroPadder, PaddedEmbedder
+from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFEmbedding, PaddedEmbedder
 from .model_gnn_config import DefaultGraphCoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
@@ -68,6 +68,12 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         if model_config['angles']:
             dim_ligand += dim_angle
 
+        if model_config['num_convs'] is None:
+            model_config['num_convs'] = 2
+
+        if model_config['conv_type'] is None:
+            model_config['conv_type'] = 'CGConv'
+
         # The model config determines which components of the model
         # are active
         self.model_config        = model_config
@@ -87,36 +93,58 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
         self.activation          = torch.nn.ELU(inplace=True)
 
+        sequential_layers = []
+
+        for _ in range(model_config['num_convs']):
+
+            # Add convolution operation
+
+            if model_config['conv_type'] == 'CGConv':
+
+                sequential_layers.append(
+                    (HeteroConv({
+                        ('site'  , '*', 'site'  ): IdConv(),
+                        ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
+                        ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
+                    }), 'x, edge_index, edge_attr -> x')
+                )
+
+            elif model_config['conv_type'] == 'ResGatedGraphConv':
+
+                sequential_layers.append(
+                    (HeteroConv({
+                        ('site'  , '*', 'site'  ): IdConv(),
+                        ('ligand', '*', 'ce'    ): ResGatedGraphConv((dim_ligand, dim_ce), dim_ce    , edge_dim=dim_distance, add_self_loops=True),
+                        ('ce'    , '*', 'ligand'): ResGatedGraphConv((dim_ce, dim_ligand), dim_ligand, edge_dim=dim_distance, add_self_loops=True),
+                    }), 'x, edge_index, edge_attr -> x')
+                )
+
+            else:
+                raise ValueError('Invalid conv_type specified')
+
+            # Add activation function
+            sequential_layers.append(
+                (lambda x: { k : v if k == 'site' else self.activation(v) for k, v in x.items()}, 'x -> x'),
+            )
+
+        sequential_layers += [
+            # Mixing layer
+            # -------------------------------------------------------------------------------------------
+            (HeteroConv({
+                ('ce', '*', 'site'): GraphConv((dim_ce, dim_site), dim_site, add_self_loops=True, bias=False),
+            }, aggr='mean'), 'x, edge_index -> x'),
+            # Apply activation
+            (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
+            # Output layer
+            # -------------------------------------------------------------------------------------------
+            # Apply mean pooling
+            (lambda x, batch: { k : global_mean_pool(v, batch[k]) for k, v in x.items() }, 'x, batch -> x'),
+            # Extract only site features
+            (lambda x: x['site'], 'x -> x')
+        ]
+
         # Core graph network
-        self.layers = Sequential('x, edge_index, edge_attr, batch', [
-                # Layer 1 -----------------------------------------------------------------------------------
-                (HeteroConv({
-                    ('site'  , '*', 'site'  ): IdConv(),
-                    ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
-                    ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
-                }), 'x, edge_index, edge_attr -> x'),
-                # Apply activation, except for site nodes
-                (lambda x: { k : v if k == 'site' else self.activation(v) for k, v in x.items()}, 'x -> x'),
-                # Layer 2 -----------------------------------------------------------------------------------
-                (HeteroConv({
-                    ('site'  , '*', 'site'  ): IdConv(),
-                    ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
-                    ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
-                }), 'x, edge_index, edge_attr -> x'),
-                # Apply activation, except for site nodes
-                (lambda x: { k : v if k == 'site' else self.activation(v) for k, v in x.items()}, 'x -> x'),
-                # Layer 4 -----------------------------------------------------------------------------------
-                (HeteroConv({
-                    ('ce', '*', 'site'): GraphConv((dim_ce, dim_site), dim_site, add_self_loops=True, bias=False),
-                }, aggr='mean'), 'x, edge_index -> x'),
-                # Apply activation
-                (lambda x: { k : self.activation(v) for k, v in x.items()}, 'x -> x'),
-                # Output  -----------------------------------------------------------------------------------
-                # Apply mean pooling
-                (lambda x, batch: { k : global_mean_pool(v, batch[k]) for k, v in x.items() }, 'x, batch -> x'),
-                # Extract only site features
-                (lambda x: x['site'], 'x -> x')
-            ])
+        self.layers = Sequential('x, edge_index, edge_attr, batch', sequential_layers)
 
         # Final dense layer
         self.dense = ModelDense([dim_site] + layers, **kwargs)
