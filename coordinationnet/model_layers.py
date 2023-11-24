@@ -309,7 +309,7 @@ class SphericalBesselFunction(torch.nn.Module):
         roots = self.SPHERICAL_BESSEL_ROOTS[: self.max_l, : self.max_n]
 
         results = []
-        factor = sqrt(2.0 / self.cutoff**3)
+        factor  = sqrt(2.0 / self.cutoff**3)
         for i in range(self.max_l):
             root = roots[i]
             func = self.funcs[i]

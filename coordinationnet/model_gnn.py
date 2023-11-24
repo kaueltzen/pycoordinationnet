@@ -166,7 +166,6 @@ class ModelGraphCoordinationNet(torch.nn.Module):
             self.embedding_element  (x_input['site'].x['elements'  ]),
             self.embedding_oxidation(x_input['site'].x['oxidations']),
             ), dim=1)
-
         x_ce = torch.cat((
             self.embedding_element  (x_input['ce'].x['elements'  ]),
             self.embedding_oxidation(x_input['ce'].x['oxidations']),

@@ -171,8 +171,8 @@ class GraphCoordinationData(GenericDataset):
         data['ligand', '*', 'ce'].edge_index = torch.tensor(edge_index_1, dtype=torch.long)
         data['ce', '*', 'ligand'].edge_index = torch.tensor(edge_index_2, dtype=torch.long)
         # Assign edge features
-        data['ligand', '*', 'ce'].edge_attr = torch.tensor(edge_attr, dtype=torch.long)
-        data['ce', '*', 'ligand'].edge_attr = torch.tensor(edge_attr, dtype=torch.long)
+        data['ligand', '*', 'ce'].edge_attr = torch.tensor(edge_attr)
+        data['ce', '*', 'ligand'].edge_attr = torch.tensor(edge_attr)
         # Connect CE nodes to site nodes
         data['ce', '*', 'site'].edge_index = torch.tensor(edge_index_3, dtype=torch.long)
 
