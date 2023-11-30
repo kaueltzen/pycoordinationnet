@@ -116,9 +116,9 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
                 sequential_layers.append(
                     (HeteroConv({
-                        ('site'  , '*', 'site'  ): CGConv((dim_site, dim_site), 0, add_self_loops=False),
-                        ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
-                        ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
+                        ('site'  , '*', 'site'  ): CGConv((dim_site, dim_site), add_self_loops=False, dim = 0),
+                        ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), add_self_loops=True , dim = dim_distance if model_config['distances'] else 0),
+                        ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), add_self_loops=True , dim = dim_distance if model_config['distances'] else 0),
                     }), 'x, edge_index, edge_attr -> x')
                 )
 
@@ -126,9 +126,9 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
                 sequential_layers.append(
                     (HeteroConv({
-                        ('site'  , '*', 'site'  ): ResGatedGraphConv((dim_site, dim_site), dim_site  , edge_dim=None        , add_self_loops=False),
-                        ('ligand', '*', 'ce'    ): ResGatedGraphConv((dim_ligand, dim_ce), dim_ce    , edge_dim=dim_distance, add_self_loops=True),
-                        ('ce'    , '*', 'ligand'): ResGatedGraphConv((dim_ce, dim_ligand), dim_ligand, edge_dim=dim_distance, add_self_loops=True),
+                        ('site'  , '*', 'site'  ): ResGatedGraphConv((dim_site, dim_site), dim_site  , add_self_loops=False, edge_dim=None),
+                        ('ligand', '*', 'ce'    ): ResGatedGraphConv((dim_ligand, dim_ce), dim_ce    , add_self_loops=True , edge_dim=dim_distance if model_config['distances'] else None),
+                        ('ce'    , '*', 'ligand'): ResGatedGraphConv((dim_ce, dim_ligand), dim_ligand, add_self_loops=True , edge_dim=dim_distance if model_config['distances'] else None),
                     }), 'x, edge_index, edge_attr -> x')
                 )
 
@@ -164,55 +164,30 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
     def forward(self, x_input):
 
+        device   = x_input['site'  ].x['elements'].device
+
+        n_site   = x_input['site'  ].x['elements'].shape[0]
+        n_ce     = x_input['ce'    ].x['elements'].shape[0]
+        n_ligand = x_input['ligand'].x['elements'].shape[0]
+
         x_site = torch.cat((
-            self.embedding_element  (x_input['site'].x['elements']),
+            self.embedding_element  (x_input['site'].x['elements'  ]),
+            self.embedding_oxidation(x_input['site'].x['oxidations']) if self.model_config['oxidations'] else torch.empty(n_site, 0, device=device),
             ), dim=1)
+
         x_ce = torch.cat((
-            self.embedding_element  (x_input['ce'].x['elements']),
+            self.embedding_element  (x_input['ce'].x['elements'  ]),
+            self.embedding_oxidation(x_input['ce'].x['oxidations']) if self.model_config['oxidations'] else torch.empty(n_ce, 0, device=device),
+            self.embedding_geometry (x_input['ce'].x['geometries']) if self.model_config['geometries'] else torch.empty(n_ce, 0, device=device),
+            self.rbf_csm            (x_input['ce'].x['csms'      ]) if self.model_config['csms'      ] else torch.empty(n_ce, 0, device=device),
             ), dim=1)
 
         x_ligand = torch.cat((
-            self.embedding_element  (x_input['ligand'].x['elements']),
+            self.embedding_element  (x_input['ligand'].x['elements'  ]),
+            self.embedding_oxidation(x_input['ligand'].x['oxidations']) if self.model_config['oxidations'] else torch.empty(n_ligand, 0, device=device),
+            self.rbf_distances_1    (x_input['ligand'].x['distances' ]) if self.model_config['distances' ] else torch.empty(n_ligand, 0, device=device),
+            self.rbf_angles         (x_input['ligand'].x['angles'    ]) if self.model_config['angles'    ] else torch.empty(n_ligand, 0, device=device),
             ), dim=1)
-
-        # Add optional features
-        if self.model_config['oxidations']:
-            x_site = torch.cat((
-                x_site,
-                self.embedding_oxidation(x_input['site'].x['oxidations']),
-                ), dim=1)
-            x_ce = torch.cat((
-                x_ce,
-                self.embedding_oxidation(x_input['ce'].x['oxidations']),
-                ), dim=1)
-            x_ligand = torch.cat((
-                x_ligand,
-                self.embedding_oxidation(x_input['ligand'].x['oxidations']),
-                ), dim=1)
-
-        if self.model_config['distances']:
-            x_ligand = torch.cat((
-                x_ligand,
-                self.rbf_distances_1(x_input['ligand'].x['distances']),
-                ), dim=1)
-
-        if self.model_config['geometries']:
-            x_ce = torch.cat((
-                x_ce,
-                self.embedding_geometry (x_input['ce'].x['geometries']),
-                ), dim=1)
-
-        if self.model_config['csms']:
-            x_ce = torch.cat((
-                x_ce,
-                self.embedding_geometry (x_input['ce'].x['csms']),
-                ), dim=1)
-
-        if self.model_config['angles']:
-            x_ligand = torch.cat((
-                x_ligand,
-                self.rbf_angles(x_input['ligand'].x['angles']),
-                ), dim=1)
 
         # Concatenate embeddings to yield a single feature vector per node
         x = {
@@ -221,7 +196,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         edge_attr_dict = {
             ('ligand', '*', 'ce'): self.rbf_distances_2(x_input['ligand', '*', 'ce'].edge_attr),
             ('ce', '*', 'ligand'): self.rbf_distances_2(x_input['ce', '*', 'ligand'].edge_attr),
-        }
+        } if self.model_config['distances'] else {}
         # Propagate features through graph network
         x = self.layers(x, x_input.edge_index_dict, edge_attr_dict, x_input.batch_dict)
         # Apply final dense layer
