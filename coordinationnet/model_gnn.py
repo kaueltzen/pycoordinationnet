@@ -26,7 +26,7 @@ from torch_geometric.typing  import Adj, OptTensor, PairTensor
 from .features_coding import NumOxidations, NumGeometries
 
 from .model_layers     import TorchStandardScaler, ModelDense, ElementEmbedder, RBFEmbedding, PaddedEmbedder, SphericalBesselFunction
-from .model_gnn_config import DefaultGraphCoordinationNetConfig
+from .model_gnn_config import GraphCoordinationNetConfig
 
 ## ----------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ class IdConv(MessagePassing):
 class ModelGraphCoordinationNet(torch.nn.Module):
     def __init__(self,
         # Specify model components
-        model_config = DefaultGraphCoordinationNetConfig,
+        model_config = GraphCoordinationNetConfig,
         # Options for dense layers
         layers = [512, 128, 64, 1], **kwargs):
 
@@ -58,24 +58,26 @@ class ModelGraphCoordinationNet(torch.nn.Module):
         dim_distance  = model_config['dim_distance']
         dim_angle     = model_config['dim_angle']
 
-        dim_site   = dim_element + dim_oxidation
-        dim_ce     = dim_element + dim_oxidation + dim_geometry + dim_csm
-        dim_ligand = dim_element + dim_oxidation
+        dim_site   = dim_element
+        dim_ce     = dim_element
+        dim_ligand = dim_element
+
+        if model_config['oxidations']:
+            dim_site   += dim_oxidation
+            dim_ce     += dim_oxidation
+            dim_ligand += dim_oxidation
 
         if model_config['distances']:
             dim_ligand += dim_distance
 
+        if model_config['geometries']:
+            dim_ce += dim_geometry
+
+        if model_config['csms']:
+            dim_ce += dim_csm
+
         if model_config['angles']:
             dim_ligand += dim_angle
-
-        if model_config['num_convs'] is None:
-            model_config['num_convs'] = 2
-
-        if model_config['conv_type'] is None:
-            model_config['conv_type'] = 'CGConv'
-
-        if model_config['rbf_type'] is None:
-            model_config['rbf_type'] = 'Bessel'
 
         # The model config determines which components of the model
         # are active
@@ -114,7 +116,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
                 sequential_layers.append(
                     (HeteroConv({
-                        ('site'  , '*', 'site'  ): IdConv(),
+                        ('site'  , '*', 'site'  ): CGConv((dim_site, dim_site), 0, add_self_loops=False),
                         ('ligand', '*', 'ce'    ): CGConv((dim_ligand, dim_ce), dim_distance, add_self_loops=True),
                         ('ce'    , '*', 'ligand'): CGConv((dim_ce, dim_ligand), dim_distance, add_self_loops=True),
                     }), 'x, edge_index, edge_attr -> x')
@@ -124,7 +126,7 @@ class ModelGraphCoordinationNet(torch.nn.Module):
 
                 sequential_layers.append(
                     (HeteroConv({
-                        ('site'  , '*', 'site'  ): IdConv(),
+                        ('site'  , '*', 'site'  ): ResGatedGraphConv((dim_site, dim_site), dim_site  , edge_dim=None        , add_self_loops=False),
                         ('ligand', '*', 'ce'    ): ResGatedGraphConv((dim_ligand, dim_ce), dim_ce    , edge_dim=dim_distance, add_self_loops=True),
                         ('ce'    , '*', 'ligand'): ResGatedGraphConv((dim_ce, dim_ligand), dim_ligand, edge_dim=dim_distance, add_self_loops=True),
                     }), 'x, edge_index, edge_attr -> x')
@@ -163,26 +165,47 @@ class ModelGraphCoordinationNet(torch.nn.Module):
     def forward(self, x_input):
 
         x_site = torch.cat((
-            self.embedding_element  (x_input['site'].x['elements'  ]),
-            self.embedding_oxidation(x_input['site'].x['oxidations']),
+            self.embedding_element  (x_input['site'].x['elements']),
             ), dim=1)
         x_ce = torch.cat((
-            self.embedding_element  (x_input['ce'].x['elements'  ]),
-            self.embedding_oxidation(x_input['ce'].x['oxidations']),
-            self.embedding_geometry (x_input['ce'].x['geometries']),
-            self.rbf_csm            (x_input['ce'].x['csms'      ]),
+            self.embedding_element  (x_input['ce'].x['elements']),
             ), dim=1)
 
         x_ligand = torch.cat((
-            self.embedding_element  (x_input['ligand'].x['elements'  ]),
-            self.embedding_oxidation(x_input['ligand'].x['oxidations']),
+            self.embedding_element  (x_input['ligand'].x['elements']),
             ), dim=1)
 
         # Add optional features
+        if self.model_config['oxidations']:
+            x_site = torch.cat((
+                x_site,
+                self.embedding_oxidation(x_input['site'].x['oxidations']),
+                ), dim=1)
+            x_ce = torch.cat((
+                x_ce,
+                self.embedding_oxidation(x_input['ce'].x['oxidations']),
+                ), dim=1)
+            x_ligand = torch.cat((
+                x_ligand,
+                self.embedding_oxidation(x_input['ligand'].x['oxidations']),
+                ), dim=1)
+
         if self.model_config['distances']:
             x_ligand = torch.cat((
                 x_ligand,
                 self.rbf_distances_1(x_input['ligand'].x['distances']),
+                ), dim=1)
+
+        if self.model_config['geometries']:
+            x_ce = torch.cat((
+                x_ce,
+                self.embedding_geometry (x_input['ce'].x['geometries']),
+                ), dim=1)
+
+        if self.model_config['csms']:
+            x_ce = torch.cat((
+                x_ce,
+                self.embedding_geometry (x_input['ce'].x['csms']),
                 ), dim=1)
 
         if self.model_config['angles']:

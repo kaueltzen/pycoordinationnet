@@ -5,7 +5,7 @@ from .features_utility   import mp_icsd_clean
 
 from .model_data import CoordinationFeaturesData
 
-from .model_gnn_config  import GraphCoordinationNetConfig, DefaultGraphCoordinationNetConfig
+from .model_gnn_config  import GraphCoordinationNetConfig
 from .model_gnn_data    import GraphCoordinationData
 from .model_gnn_wrapper import GraphCoordinationNet
 
