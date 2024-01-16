@@ -125,7 +125,8 @@ def compute_features_first_degree(structure_connectivity : StructureConnectivity
         for nb in atom[0].neighb_sites_and_indices:
             # Pymatgen bug-fix (PeriodicNeighbor cannot be serialized, need to convert to PeriodicSite)
             # (fixed with 0eb1e3d72fd894b7ba39a5129fbd8b18aedf4b46)
-            site     = PeriodicSite.from_dict(nb['site'].as_dict())
+            # site     = PeriodicSite.from_dict(nb['site'].as_dict())
+            site     = nb['site']
             distance = site.distance_from_point(structure[atomIndex].coords)
             result.distances.add_item(atomIndex, nb['index'], distance)
 
