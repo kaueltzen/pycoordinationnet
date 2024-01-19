@@ -748,9 +748,9 @@ class BatchedTransformerCoordinationFeaturesData(torch.utils.data.Dataset):
 
             self.n += 1
 
-        self._write_config(tarf, {'batch_size': batch_size, 'model_config': model_config, 'n': self.n})
-
-        tarf.close()
+        if tarf is not None:
+            self._write_config(tarf, {'batch_size': batch_size, 'model_config': model_config, 'n': self.n})
+            tarf.close()
 
     def _open_cache(self, mode = 'r'):
         return tarfile.open(self.cache_file, mode)
