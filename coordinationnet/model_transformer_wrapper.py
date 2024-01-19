@@ -28,7 +28,7 @@ from .model_lit              import LitModel, LitDataset
 ## ----------------------------------------------------------------------------
 
 class LitTransformerCoordinationFeaturesData(LitDataset):
-    def __init__(self, data : CoordinationFeaturesData, val_size = 0.2, batch_size = 32, num_workers = 2):
+    def __init__(self, data : CoordinationFeaturesData, val_size = 0.2, batch_size = 32, num_workers = 2, default_root_dir = None, seed = None):
         super().__init__(data, val_size = val_size, batch_size = batch_size, num_workers = num_workers)
 
     # Custom method to create a data loader
