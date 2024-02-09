@@ -34,7 +34,9 @@ from pymatgen.util.coord     import get_angle
 
 ## -----------------------------------------------------------------------------
 
-def analyze_environment(structure : Structure, env_strategy : str, additional_conditions) -> tuple[StructureConnectivity, list[int]]:
+def analyze_environment(structure : Structure, env_strategy : str, additional_conditions,
+                        guess_oxidation_states_from_composition: bool = False,
+                        threshold_reduced_composition: int = 200) -> tuple[StructureConnectivity, list[int]]:
     '''
     Analyzes the coordination environments and returns the StructureConnectivity object for the crystal and the list of oxidation states.
     First, BVAnalyzer() calculates the oxidation states. Then, the LocalGeometryFinder() computes the structure_environment object, 
@@ -46,6 +48,11 @@ def analyze_environment(structure : Structure, env_strategy : str, additional_co
             crystal Structure object from pymatgen
         mystrategy (string):
 	        The simple or combined strategy for calculating the coordination environments
+	    guess_oxidation_states_from_composition:
+                whether to guess oxidation states via structure.add_oxidation_state_by_guess()
+        threshold_reduced_composition:
+                number of atoms in structure above which oxidation states are guessed from reduced
+                composition for performance reasons. Only applicable if guess_oxidation_states_from_composition.
     '''
     if env_strategy == 'simple':
         strategy = SimplestChemenvStrategy(distance_cutoff=1.4, angle_cutoff=0.3)
@@ -56,8 +63,16 @@ def analyze_environment(structure : Structure, env_strategy : str, additional_co
     # TODO:
     # Extend similar to emmet:
     # https://github.com/materialsproject/emmet/blob/1a185027d017475e6112164df50428a0b06406c8/emmet-core/emmet/core/oxidation_states.py#L71
-    bv = BVAnalyzer()
-    oxid_states = bv.get_valences(structure)
+    if guess_oxidation_states_from_composition:
+        if len(structure) > threshold_reduced_composition:
+            structure.add_oxidation_state_by_guess(max_sites=-1)
+        else:
+            structure.add_oxidation_state_by_guess()
+        oxid_states = [site.specie.oxi_state for site in structure.sites]
+
+    else:
+        bv = BVAnalyzer()
+        oxid_states = bv.get_valences(structure)
     
     # Backup current stdout
     old_stdout = sys.stdout

@@ -160,7 +160,10 @@ class CoordinationFeatures(FancyString, MyMSONable):
 
 
     @classmethod
-    def from_structure(cls, structure : Structure, env_strategy = 'simple', additional_conditions = [AdditionalConditions.ONLY_ANION_CATION_BONDS], encode = False) -> dict:
+    def from_structure(cls, structure : Structure, env_strategy = 'simple',
+                       additional_conditions = [AdditionalConditions.ONLY_ANION_CATION_BONDS],
+                       encode = False, guess_oxidation_states_from_composition: bool = False,
+                       threshold_reduced_composition: int = 200) -> dict:
         '''
         Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
         based on SC object, returns them as a dictionary. These features are stored for each atom,
@@ -174,6 +177,11 @@ class CoordinationFeatures(FancyString, MyMSONable):
                 A pymatgen structure object
             env_strategy (string):
                 The strategy used for computing environments
+            guess_oxidation_states_from_composition:
+                whether to guess oxidation states via structure.add_oxidation_state_by_guess()
+            threshold_reduced_composition:
+                number of atoms in structure above which oxidation states are guessed from reduced
+                composition for performance reasons. Only applicable if guess_oxidation_states_from_composition.
         
         Returns:
             A dictionary of features for each atom in the structure
@@ -183,7 +191,10 @@ class CoordinationFeatures(FancyString, MyMSONable):
         structure_connectivity, oxid_states = analyze_environment(
             structure,
             env_strategy = env_strategy,
-            additional_conditions = additional_conditions)
+            additional_conditions = additional_conditions,
+            guess_oxidation_states_from_composition=guess_oxidation_states_from_composition,
+            threshold_reduced_composition=threshold_reduced_composition
+        )
 
         # Computefirst degree features
         result = compute_features_first_degree(structure_connectivity, oxid_states, result)
