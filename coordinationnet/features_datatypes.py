@@ -196,6 +196,9 @@ class CoordinationFeatures(FancyString, MyMSONable):
             threshold_reduced_composition=threshold_reduced_composition
         )
 
+        if not any(oxid_states):
+            raise ValueError("No non-zero oxidation states")
+
         # Computefirst degree features
         result = compute_features_first_degree(structure_connectivity, oxid_states, result)
         # Compute features between coordination environments
