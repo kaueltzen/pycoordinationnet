@@ -21,7 +21,8 @@ from pymatgen.core.structure import Structure
 from pymatgen.analysis.chemenv.utils.defs_utils import AdditionalConditions
 
 from .features_coding     import encode_features, decode_features
-from .features_featurizer import analyze_environment, compute_features_first_degree, compute_features_nnn
+from .features_featurizer import (analyze_environment, compute_features_first_degree,
+                                  compute_features_nnn, compute_features_nnn_all_images)
 
 ## -----------------------------------------------------------------------------
 
@@ -163,7 +164,7 @@ class CoordinationFeatures(FancyString, MyMSONable):
     def from_structure(cls, structure : Structure, env_strategy = 'simple',
                        additional_conditions = [AdditionalConditions.ONLY_ANION_CATION_BONDS],
                        encode = False, guess_oxidation_states_from_composition: bool = False,
-                       threshold_reduced_composition: int = 200) -> dict:
+                       threshold_reduced_composition: int = 200, include_edge_multiplicities: bool = True) -> dict:
         '''
         Calls firstDegreeFeatures() & nnnFeatures() functions to calculate the desired features 
         based on SC object, returns them as a dictionary. These features are stored for each atom,
@@ -182,6 +183,8 @@ class CoordinationFeatures(FancyString, MyMSONable):
             threshold_reduced_composition:
                 number of atoms in structure above which oxidation states are guessed from reduced
                 composition for performance reasons. Only applicable if guess_oxidation_states_from_composition.
+            include_edge_multiplicities:
+                include multiplicity of edges when computing nnn features
         
         Returns:
             A dictionary of features for each atom in the structure
@@ -202,7 +205,10 @@ class CoordinationFeatures(FancyString, MyMSONable):
         # Computefirst degree features
         result = compute_features_first_degree(structure_connectivity, oxid_states, result)
         # Compute features between coordination environments
-        result = compute_features_nnn(structure_connectivity, result)
+        if include_edge_multiplicities:
+            result = compute_features_nnn_all_images(structure_connectivity, result)
+        else:
+            result = compute_features_nnn(structure_connectivity, result)
 
         if encode:
             result = result.encode()

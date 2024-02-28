@@ -241,3 +241,112 @@ def compute_features_nnn(structure_connectivity : StructureConnectivity, result 
             result.ce_neighbors.add_item(site, site_to, distance, connectivity, ligand_indices, angles)
 
     return result
+
+
+def compute_features_nnn_all_images(structure_connectivity: StructureConnectivity,
+                                    result: 'CoordinationFeatures') -> 'CoordinationFeatures':
+    '''
+    Calculates the desired NNN (next nearest neighbors) features based on SC object,
+    and adds them to a dictionary (of primary features). These features are stored
+    for each atom, under their structure index. NNN features Include: Polyhedral neighbor
+    elements, distances, connectivity angles & types.
+    Includes multiplicity of edges.
+
+    Args:
+        structure_connectivity (StructureConnectivity):
+            The connectivity structure of the material
+        structure_data (dict):
+            A dictionary containing primary features of the crystal. The NNN features
+            will be added under the same atom index.
+
+    Returns:
+        A dictionary with next nearest neighbor features added to the structure_data
+        object
+    '''
+
+    structure = structure_connectivity.light_structure_environments.structure
+    nodes = structure_connectivity.environment_subgraph().nodes()
+    neighbors_sets = structure_connectivity.light_structure_environments.neighbors_sets
+
+    # Loop over all sites in the structure
+    for node in nodes:
+        # Get edge (NOT BOND!!) multiplicities  # TODO: possible to extract edge instead of bond multiplicities?
+        assert node.isite == neighbors_sets[node.isite][0].isite  # TODO: why this data structure w. lists of len 1?
+        all_ligands = neighbors_sets[node.isite][0].neighb_indices_and_images
+        all_ligands = [lig["index"] for lig in all_ligands]
+
+        for edge in structure_connectivity.environment_subgraph().edges(node, data=True):
+            # Get site indices for which the distance is computed
+            if node.isite == edge[2]['start']:
+                site = edge[2]['start']
+                site_to = edge[2]['end']
+            else:
+                site = edge[2]['end']
+                site_to = edge[2]['start']
+
+            # Compute distance
+            distance = structure[edge[2]['start']].distance(structure[edge[2]['end']], edge[2]['delta'])
+
+            # Angles calculation
+            ligands = edge[2]['ligands']
+
+            # Determine the type of connectivity from the number of ligands
+            if len(ligands) == 0:
+                connectivity = 'isolated'
+            elif len(ligands) == 1:
+                connectivity = 'corner'
+            elif len(ligands) == 2:
+                connectivity = 'edge'
+            else:
+                connectivity = 'face'
+
+            angles = []
+            ligand_indices = []
+
+            # Sanity check, making sure that we are not missing special cases
+            bond_multiplicities = [all_ligands.count(lig[0]) for lig in ligands]
+            edge_multiplicity = min(bond_multiplicities)  # TODO: PROVE!!!
+            if edge_multiplicity > 1 and len(set(bond_multiplicities)) > 1:
+                print("Edge multiplicity > 2 with more than 1 bond multiplicity!: ")
+                print(structure.composition, site, site_to, [lig[0] for lig in ligands], bond_multiplicities)
+
+            # For each ligand compute the angle to another coordination environment (central atom)
+            for ligand in ligands:
+                # The ligand item contains a path one central atom (cation) to another central atom
+                # along a single ligand (anions). The `start` item always points to a central atom,
+                # while the end will be the ligand.
+
+                # We consider two connecting atoms of the ligand. Get the coordinates of all three
+                # sites
+                pos0 = structure[ligand[1]['start']].frac_coords
+                pos1 = structure[ligand[1]['end']].frac_coords + ligand[1]['delta']
+                pos2 = structure[ligand[2]['start']].frac_coords
+                pos3 = structure[ligand[2]['end']].frac_coords + ligand[2]['delta']
+
+                cart_pos0 = structure.lattice.get_cartesian_coords(pos0)
+                cart_pos1 = structure.lattice.get_cartesian_coords(pos1)
+                cart_pos2 = structure.lattice.get_cartesian_coords(pos2)
+                cart_pos3 = structure.lattice.get_cartesian_coords(pos3)
+
+                # Measure the angle at the ligand
+                angle = get_angle(cart_pos0 - cart_pos1, cart_pos2 - cart_pos3, units='degrees')
+
+                if ligand[1]['start'] == node.isite:
+                    assert site == ligand[1]['start']
+                    assert site_to == ligand[2]['start']
+                elif ligand[2]['start'] == node.isite:
+                    assert site == ligand[2]['start']
+                    assert site_to == ligand[1]['start']
+                else:
+                    raise ValueError(f'Ligand is not connected to center atom')
+
+                assert ligand[0] == ligand[1]['end']
+                assert ligand[0] == ligand[2]['end']
+
+                angles.append(angle)
+                ligand_indices.append(ligand[0])
+
+            for _ in range(edge_multiplicity):
+                result.ce_neighbors.add_item(site, site_to, distance, connectivity, ligand_indices, angles)
+
+    return result
