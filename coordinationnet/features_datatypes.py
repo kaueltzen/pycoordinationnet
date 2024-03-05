@@ -201,6 +201,7 @@ class CoordinationFeatures(FancyString, MyMSONable):
 
         if not any(oxid_states):
             raise ValueError("No non-zero oxidation states")
+        # TODO: handling of partially zero oxidation states like 0.194 -> AssertionError in nnn feat. computation
 
         # Computefirst degree features
         result = compute_features_first_degree(structure_connectivity, oxid_states, result)
