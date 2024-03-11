@@ -345,12 +345,9 @@ def compute_features_nnn_all_images(structure_connectivity: StructureConnectivit
                 ligand_indices.append(ligand[0])
 
             if edge[0] == edge[1]:
-                ligands_edge0 = frozenset([str(lig[0]) + str(lig[1]["delta"]) for lig in edge[2]["ligands"]])
-                ligands_edge1 = frozenset([str(lig[0]) + str(lig[2]["delta"]) for lig in edge[2]["ligands"]])
-                both_ways.update({ligands_edge0: {"site": site, "site_to": site_to, "distance": distance,
-                                                  "connectivity": connectivity, "ligand_indices": ligand_indices,
-                                                  "angles": angles},
-                                  ligands_edge1: {"site": site, "site_to": site_to, "distance": distance,
+                ligands = frozenset([str(lig[0]) + str(lig[1]["delta"]) + "a" for lig in edge[2]["ligands"]] +
+                                    [str(lig[0]) + str(lig[2]["delta"]) + "b" for lig in edge[2]["ligands"]])
+                both_ways.update({ligands: {"site": site, "site_to": site_to, "distance": distance,
                                                   "connectivity": connectivity, "ligand_indices": ligand_indices,
                                                   "angles": angles}})
                 """
@@ -372,6 +369,9 @@ def compute_features_nnn_all_images(structure_connectivity: StructureConnectivit
             result.ce_neighbors.add_item(site, site_to, distance, connectivity, ligand_indices, angles)
 
         for value in both_ways.values():
+            result.ce_neighbors.add_item(site=value["site"], site_to=value["site_to"], distance=value["distance"],
+                                         connectivity=value["connectivity"], ligand_indices=value["ligand_indices"],
+                                         angles=value["angles"])
             result.ce_neighbors.add_item(site=value["site"], site_to=value["site_to"], distance=value["distance"],
                                          connectivity=value["connectivity"], ligand_indices=value["ligand_indices"],
                                          angles=value["angles"])
