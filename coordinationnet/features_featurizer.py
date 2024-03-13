@@ -266,18 +266,10 @@ def compute_features_nnn_all_images(structure_connectivity: StructureConnectivit
 
     structure = structure_connectivity.light_structure_environments.structure
     nodes = structure_connectivity.environment_subgraph().nodes()
-    neighbors_sets = structure_connectivity.light_structure_environments.neighbors_sets
 
     # Loop over all sites in the structure
     for node in nodes:
-        # Get edge (NOT BOND!!) multiplicities  # TODO: possible to extract edge instead of bond multiplicities?
-        """
-        assert node.isite == neighbors_sets[node.isite][0].isite
-        all_ligands = neighbors_sets[node.isite][0].neighb_indices_and_images
-        all_ligands = [lig["index"] for lig in all_ligands]
-        """
 
-        # covered, uncovered = {}, {}
         both_ways = {}  # tracker of edges with site == site_to
 
         for edge in structure_connectivity.environment_subgraph().edges(node, data=True):
@@ -350,22 +342,8 @@ def compute_features_nnn_all_images(structure_connectivity: StructureConnectivit
                 both_ways.update({ligands: {"site": site, "site_to": site_to, "distance": distance,
                                                   "connectivity": connectivity, "ligand_indices": ligand_indices,
                                                   "angles": angles}})
-                """
-                covered.update({ligands_edge0: (site, site_to, distance, connectivity, ligand_indices, angles)})
-                if ligands_edge0 in uncovered:
-                    del uncovered[ligands_edge0]
-                uncovered.update({ligands_edge1: (site, site_to, distance, connectivity, ligand_indices, angles)})
-                """
                 continue
-            """
-            # Sanity check, making sure that we are not missing special cases
-            bond_multiplicities = [all_ligands.count(lig[0]) for lig in ligands]
-            edge_multiplicity = min(bond_multiplicities) if edge[0].isite == edge[1].isite else 1
-            if edge_multiplicity > 1 and len(set(bond_multiplicities)) > 1:
-                print("Edge multiplicity > 2 with more than 1 bond multiplicity!: ")
-                print(structure.composition, site, site_to, [lig[0] for lig in ligands], bond_multiplicities)
-                print(edge[2])
-            """
+            
             result.ce_neighbors.add_item(site, site_to, distance, connectivity, ligand_indices, angles)
 
         for value in both_ways.values():
