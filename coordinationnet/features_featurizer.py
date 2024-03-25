@@ -73,6 +73,9 @@ def analyze_environment(structure : Structure, env_strategy : str, additional_co
     else:
         bv = BVAnalyzer()
         oxid_states = bv.get_valences(structure)
+
+    # Remove oxidation states as CoordinationFeatures stores species -> inconsistent BVA / guessing approach otherwise
+    structure.remove_oxidation_states()
     
     # Backup current stdout
     old_stdout = sys.stdout
